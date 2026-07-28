@@ -1,0 +1,10 @@
+{
+  "name": "Givers World Mission Student Management System",
+  "description": "A professional and modern administrative web platform for Givers World Mission (Kambia 2, Northern Province, Kambia) to manage student files, continuous assessments, grades, national exams (NPSE, BECE, WASSCE), attendance, bus logistics, staff, and school fees.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
