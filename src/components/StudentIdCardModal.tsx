@@ -504,8 +504,9 @@ export default function StudentIdCardModal({ isOpen, onClose, students, initialS
                                       <p className="font-bold text-slate-800 mt-0.5 truncate">{student.parentPhone} ({student.parentName})</p>
                                     </div>
                                     <div>
-                                      <p className="font-extrabold text-slate-400 uppercase">School Registrar</p>
+                                      <p className="font-extrabold text-slate-400 uppercase">Portal & Registrar</p>
                                       <p className="font-bold text-indigo-600 mt-0.5 truncate">{SCHOOL_INFO.phone}</p>
+                                      <p className="text-[6px] text-slate-500 font-mono truncate">{SCHOOL_INFO.website}</p>
                                     </div>
                                   </div>
                                 </div>
@@ -691,8 +692,9 @@ export default function StudentIdCardModal({ isOpen, onClose, students, initialS
                                   <p className="font-bold text-slate-800 mt-0.5 truncate">{student.parentPhone} ({student.parentName})</p>
                                 </div>
                                 <div>
-                                  <p className="font-extrabold text-slate-400 uppercase">School Registrar</p>
+                                  <p className="font-extrabold text-slate-400 uppercase">Portal & Registrar</p>
                                   <p className="font-bold text-indigo-600 mt-0.5 truncate">{SCHOOL_INFO.phone}</p>
+                                  <p className="text-[6px] text-slate-500 font-mono truncate">{SCHOOL_INFO.website}</p>
                                 </div>
                               </div>
                             </div>

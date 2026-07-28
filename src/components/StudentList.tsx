@@ -1166,7 +1166,7 @@ export default function StudentList({
                     <div className="space-y-1">
                       <h1 className="text-xl font-black text-slate-800 tracking-tight font-sans uppercase">{SCHOOL_INFO.name}</h1>
                       <p className="text-[11px] font-bold text-indigo-600 italic">" {SCHOOL_INFO.motto} "</p>
-                      <p className="text-[10px] text-slate-500 font-medium font-mono">{SCHOOL_INFO.address} | Phone: {SCHOOL_INFO.phone}</p>
+                      <p className="text-[10px] text-slate-500 font-medium font-mono">{SCHOOL_INFO.address} | Phone: {SCHOOL_INFO.phone} | Web: {SCHOOL_INFO.website}</p>
                     </div>
                   </div>
 
@@ -1255,8 +1255,8 @@ export default function StudentList({
                     <p className="font-mono mt-0.5">SHA-256 Checksum: VERITAS-STUDENT-LEDGER-2026</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-slate-700">Eunice O.C Decker</p>
-                    <p className="italic">Principal Registrar Seal & Signature</p>
+                    <p className="font-bold text-slate-700">{SCHOOL_INFO.principalName}</p>
+                    <p className="italic">Principal & Co-Founder Seal & Signature</p>
                   </div>
                 </div>
               </div>

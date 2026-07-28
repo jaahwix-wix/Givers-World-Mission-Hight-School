@@ -30,7 +30,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  Cell
 } from 'recharts';
 import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
@@ -247,6 +248,48 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
       return { student, type: ep.examType, average: avgMock };
     });
 
+  // Attendance rate calculation across school levels for current term (Term 3)
+  const attendanceData = useMemo(() => {
+    const levels: Record<string, { level: string; present: number; total: number }> = {
+      Nursery: { level: 'Nursery/Prep', present: 0, total: 0 },
+      Primary: { level: 'Primary (1-6)', present: 0, total: 0 },
+      JSS: { level: 'JSS (1-3)', present: 0, total: 0 },
+      SSS: { level: 'SSS (1-3)', present: 0, total: 0 },
+    };
+
+    records.forEach(r => {
+      const student = students.find(s => s.id === r.studentId);
+      if (!student || student.status !== 'Active') return;
+
+      let key = 'Primary';
+      if (student.currentClass.startsWith('Prep')) key = 'Nursery';
+      else if (student.currentClass.startsWith('JSS')) key = 'JSS';
+      else if (student.currentClass.startsWith('SSS')) key = 'SSS';
+
+      const att = r.terms[3]?.attendance || r.terms[2]?.attendance;
+      if (att) {
+        levels[key].present += att.presentDays;
+        levels[key].total += att.totalDays;
+      }
+    });
+
+    return Object.values(levels).map(item => {
+      const rate = item.total > 0 ? Math.round((item.present / item.total) * 100) : 0;
+      return {
+        gradeLevel: item.level,
+        attendanceRate: rate,
+        presentDays: item.present,
+        totalDays: item.total
+      };
+    });
+  }, [records, students]);
+
+  const overallAttendanceRate = useMemo(() => {
+    const totalPresent = attendanceData.reduce((acc, curr) => acc + curr.presentDays, 0);
+    const totalDays = attendanceData.reduce((acc, curr) => acc + curr.totalDays, 0);
+    return totalDays > 0 ? Math.round((totalPresent / totalDays) * 100) : 0;
+  }, [attendanceData]);
+
   return (
     <div className="space-y-6" id="dashboard-tab-panel">
       {/* Flag Accented Banner */}
@@ -276,8 +319,9 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
               Welcome to the academic control panel. Managing student profiles, Continuous Assessment (CA) scores, term positions, school fees, and national exams (NPSE, BECE, WASSCE).
             </p>
             <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-400 border-t border-slate-800 pt-3">
-              <div><span className="text-slate-200 font-semibold">Principal:</span> {SCHOOL_INFO.principalName}</div>
+              <div><span className="text-slate-200 font-semibold">Principal & Co-Founder:</span> {SCHOOL_INFO.principalName}</div>
               <div><span className="text-slate-200 font-semibold">Address:</span> {SCHOOL_INFO.address}</div>
+              <div><span className="text-slate-200 font-semibold">Portal Website:</span> <a href={SCHOOL_INFO.website} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">{SCHOOL_INFO.website}</a></div>
               <div><span className="text-slate-200 font-semibold">Year:</span> 2025/2026 Academic Cycle</div>
             </div>
           </div>
@@ -468,6 +512,107 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
                     )}
                     {tier.averageGpa.toFixed(2)} <span className="text-[9px] text-slate-400 font-normal">GPA</span>
                   </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section: Term School Attendance Bar Chart Widget */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm" id="attendance-rate-chart-section">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-slate-800 text-base">School Attendance Rate (%)</h3>
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Term 3 Active
+                  </span>
+                </div>
+                <p className="text-slate-400 text-xs mt-0.5">Overall student attendance percentage by school level for administrative tracking</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <span className="text-[11px] text-slate-400 font-medium">School Average</span>
+                  <p className="text-xl font-black text-indigo-600 leading-none">{overallAttendanceRate}%</p>
+                </div>
+                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
+                  <Users className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Recharts Bar Chart for Attendance */}
+            <div className="h-64 w-full mt-4" id="term-attendance-bar-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={attendanceData}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="gradeLevel" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11, fontWeight: 600 }}
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11 }}
+                    unit="%"
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-slate-900 text-white p-3 rounded-xl shadow-lg border border-slate-800 text-xs space-y-1.5 min-w-[200px]">
+                            <p className="font-bold border-b border-slate-800 pb-1 text-indigo-300">{label}</p>
+                            <div className="flex justify-between items-center text-emerald-400 font-extrabold text-sm pt-1">
+                              <span>Attendance Rate:</span>
+                              <span>{data.attendanceRate}%</span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-300 text-[11px] pt-1 border-t border-slate-800">
+                              <span>Present Days:</span>
+                              <span className="font-semibold text-white">{data.presentDays.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-400 text-[11px]">
+                              <span>Total Expected:</span>
+                              <span className="font-semibold text-slate-200">{data.totalDays.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="attendanceRate" name="Attendance Rate (%)" radius={[8, 8, 0, 0]}>
+                    {attendanceData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.attendanceRate >= 95 ? '#10b981' : entry.attendanceRate >= 90 ? '#6366f1' : '#f59e0b'} 
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Attendance Tier Breakdown Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100 text-xs">
+              {attendanceData.map((tier) => (
+                <div key={tier.gradeLevel} className="bg-slate-50/70 p-2.5 rounded-xl border border-slate-100 flex flex-col justify-between">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase truncate">{tier.gradeLevel}</span>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="font-extrabold text-slate-800 text-sm">{tier.attendanceRate}%</span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                      tier.attendanceRate >= 95 ? 'bg-emerald-100 text-emerald-800' : 'bg-indigo-100 text-indigo-800'
+                    }`}>
+                      {tier.attendanceRate >= 95 ? 'Excellent' : 'Good'}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

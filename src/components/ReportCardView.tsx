@@ -13,7 +13,8 @@ import {
   Phone, 
   Signature, 
   FileCheck,
-  CheckSquare
+  CheckSquare,
+  Globe
 } from 'lucide-react';
 import { Student, StudentAcademicRecord, StudentClass } from '../types';
 import { SCHOOL_INFO } from '../initialData';
@@ -157,6 +158,7 @@ export default function ReportCardView({ students, records, onNavigateBack, init
               <div className="flex flex-wrap justify-center md:justify-start gap-x-4 text-[10px] text-slate-500 font-medium">
                 <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {SCHOOL_INFO.address}</span>
                 <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {SCHOOL_INFO.phone}</span>
+                <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> {SCHOOL_INFO.website}</span>
               </div>
             </div>
           </div>

@@ -468,7 +468,7 @@ export default function StudentPortal({ students, records, fees }: StudentPortal
                     <div className="space-y-1">
                       <h1 className="text-lg md:text-xl font-black text-slate-800 tracking-tight font-sans uppercase">{SCHOOL_INFO.name}</h1>
                       <p className="text-[10px] font-bold text-indigo-600 italic">" {SCHOOL_INFO.motto} "</p>
-                      <p className="text-[10px] text-slate-500 font-medium">Phone: {SCHOOL_INFO.phone} | Email: {SCHOOL_INFO.email}</p>
+                      <p className="text-[10px] text-slate-500 font-medium">Phone: {SCHOOL_INFO.phone} | Email: {SCHOOL_INFO.email} | Web: {SCHOOL_INFO.website}</p>
                     </div>
                   </div>
 

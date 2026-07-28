@@ -47,9 +47,9 @@ const DEFAULT_INCIDENTS: IncidentRecord[] = [
     type: 'Commendation',
     category: 'Honesty & Integrity',
     description: 'Found a misplaced envelope containing cash on the school grounds and immediately handed it over to the Principal Registrar office without opening it.',
-    actionTaken: 'Eunice O.C Decker issued an official Certificate of Honesty during morning assembly.',
+    actionTaken: 'Evangelist Saint Turay issued an official Certificate of Honesty during morning assembly.',
     date: '2026-07-15',
-    issuerName: 'Mrs. Eunice Decker'
+    issuerName: 'Evangelist Saint Turay (Principal & Co-Founder)'
   },
   {
     id: 'inc-2',

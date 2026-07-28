@@ -15,10 +15,13 @@ export const SCHOOL_INFO = {
   address: 'Kambia 2, Northern Province, Kambia, Sierra Leone',
   phone: '031258528',
   email: 'info@giversworldmission.edu.sl',
+  website: 'https://givers-world-mission-high-school.vercel.app/',
   logo: schoolLogo,
   founded: 1998,
-  principalName: 'Eunice O.C Decker',
-  principalSignature: 'E. O.C. Decker',
+  principalName: 'Evangelist Saint Turay',
+  principalTitle: 'Principal & Co-Founder',
+  coFounder: 'Evangelist Saint Turay',
+  principalSignature: 'Evang. Saint Turay',
   vicePrincipalName: 'Mrs. Fatmata Sesay',
 };
 
