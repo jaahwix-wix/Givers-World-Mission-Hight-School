@@ -109,3 +109,36 @@ export interface ClassPerformanceSummary {
   passRate: number; // Percentage
   topStudentName: string;
 }
+
+export type UserRole = 'admin' | 'teacher' | 'bursar' | 'transport' | 'student_parent';
+
+export interface RolePrivileges {
+  role: UserRole;
+  label: string;
+  description: string;
+  canViewDashboard: boolean;
+  canViewStudents: boolean;
+  canManageStudents: boolean; // Register, edit personal details, delete
+  canTakeAttendance: boolean; // Mark attendance
+  canManageDiscipline: boolean; // Log disciplinary cases
+  canViewAcademics: boolean; // View scores & grade entry
+  canManageAcademics: boolean; // Enter & modify continuous assessments & exam marks
+  canGenerateReportCards: boolean; // Produce terminal report cards
+  canViewFinances: boolean; // View fee collections, financial metrics
+  canManageFinances: boolean; // Record fee payments, log school expenses
+  canManageStaff: boolean; // Staff profiles, subject assignments, payroll
+  canManageBus: boolean; // Manage routes, buses, driver allocation
+  canManageLibrary: boolean; // Manage book inventory, lending/returns
+  canBackupData: boolean; // System backup & restore, core configs
+  canManageUserRoles: boolean; // Manage user accounts and privilege assignments
+  canViewStudentPortal: boolean; // Student/Parent personal academic and fee tracking
+}
+
+export interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  role: UserRole;
+  isCustomRole?: boolean;
+}

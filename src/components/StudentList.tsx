@@ -13,6 +13,7 @@ import {
   FileText, 
   X, 
   UserPlus,
+  User,
   Mail, 
   Phone, 
   MapPin, 
@@ -81,6 +82,8 @@ export default function StudentList({
 
   // Form Fields
   const [formName, setFormName] = useState('');
+  const [formFirstName, setFormFirstName] = useState('');
+  const [formLastName, setFormLastName] = useState('');
   const [formDob, setFormDob] = useState('');
   const [formGender, setFormGender] = useState<'Male' | 'Female'>('Male');
   const [formClass, setFormClass] = useState<StudentClass>('Class 1');
@@ -187,7 +190,16 @@ export default function StudentList({
   // Trigger modal for editing
   const handleEditClick = (student: Student) => {
     setEditingStudent(student);
-    setFormName(student.name);
+    const fullName = (student.name || '').trim();
+    const parts = fullName.split(/\s+/);
+    if (parts.length > 1) {
+      setFormFirstName(parts.slice(0, -1).join(' '));
+      setFormLastName(parts[parts.length - 1]);
+    } else {
+      setFormFirstName(fullName);
+      setFormLastName('');
+    }
+    setFormName(fullName);
     setFormDob(student.dateOfBirth);
     setFormGender(student.gender);
     setFormClass(student.currentClass);
@@ -212,6 +224,8 @@ export default function StudentList({
   // Trigger modal for creating
   const handleAddClick = () => {
     setEditingStudent(null);
+    setFormFirstName('');
+    setFormLastName('');
     setFormName('');
     setFormDob('');
     setFormGender('Male');
@@ -236,8 +250,9 @@ export default function StudentList({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formParentName.trim() || !formParentPhone.trim()) {
-      alert('Please fill in the required fields (Student Name, Parent Name, Parent Phone)');
+    const resolvedName = (formName.trim() || `${formFirstName} ${formLastName}`.trim()).trim();
+    if (!resolvedName || !formParentName.trim() || !formParentPhone.trim()) {
+      alert('Please fill in the required fields (Student Name, Parent/Guardian Name, Parent Phone)');
       return;
     }
 
@@ -245,7 +260,7 @@ export default function StudentList({
       // Update
       const updated: Student = {
         ...editingStudent,
-        name: formName,
+        name: resolvedName,
         dateOfBirth: formDob,
         gender: formGender,
         currentClass: formClass,
@@ -270,7 +285,7 @@ export default function StudentList({
       const admissionNum = `NS-${formEnrollmentYear}-${Math.floor(1000 + Math.random() * 9000)}`;
       const newStudent: Student = {
         id: newId,
-        name: formName,
+        name: resolvedName,
         admissionNumber: admissionNum,
         dateOfBirth: formDob || '2015-01-01',
         gender: formGender,
@@ -725,291 +740,382 @@ export default function StudentList({
       {/* Modal: Add/Edit student */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto" id="student-modal">
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 z-50 overflow-hidden" 
+            id="student-modal"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsModalOpen(false);
+            }}
+          >
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-3xl border border-slate-100 shadow-xl w-full max-w-2xl overflow-hidden"
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden"
             >
-              {/* Modal Header */}
-              <div className="flex justify-between items-center bg-slate-900 text-white p-5">
-                <div>
-                  <h3 className="font-bold text-lg">{editingStudent ? 'Edit Student File' : 'Register New Student'}</h3>
-                  <p className="text-slate-400 text-xs">Fill out standard West African student registration details</p>
+              {/* Modal Header (Fixed at top) */}
+              <div className="flex justify-between items-center bg-slate-900 text-white p-4 sm:p-5 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base sm:text-lg text-white">
+                      {editingStudent ? 'Edit Student File' : 'Register New Student'}
+                    </h3>
+                    <p className="text-slate-400 text-xs">Standard West African student enrollment & academic profile</p>
+                  </div>
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(false)}
                   className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  title="Close modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Modal Form */}
-              <form onSubmit={handleSave} className="p-6 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Profile Photo Capture */}
-                  <div className="sm:col-span-2 flex flex-col items-center justify-center bg-slate-50 p-4 rounded-2xl border border-slate-100/80 mb-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">Student Profile Photo</label>
-                    
-                    <div className="relative w-32 h-32 rounded-2xl bg-slate-200 border border-slate-300 overflow-hidden flex items-center justify-center group shadow-inner">
-                      {isCameraActive ? (
-                        <video
-                          ref={videoRef}
-                          autoPlay
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : formProfileImage ? (
-                        <img
-                          src={formProfileImage}
-                          alt="Preview"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-slate-400 text-center flex flex-col items-center justify-center p-2">
-                          <Image className="w-8 h-8 text-slate-300 mb-1" />
-                          <span className="text-[10px] font-semibold text-slate-400">No Photo Captured</span>
-                        </div>
-                      )}
+              <form onSubmit={handleSave} className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+                  
+                  {/* 1. PRIMARY IDENTITY & PROFILE PHOTO SECTION */}
+                  <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-4">
+                    {/* Student Full Name - Split into First Name & Last Name */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-indigo-600" /> Student Name <span className="text-rose-500">*</span>
+                        </label>
+                        <span className="text-[11px] text-slate-500 font-medium">West African Academic Registry</span>
+                      </div>
 
-                      {/* Hover Overlay to delete photo */}
-                      {!isCameraActive && formProfileImage && (
-                        <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <button
-                            type="button"
-                            onClick={() => setFormProfileImage(undefined)}
-                            className="p-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl transition-colors cursor-pointer shadow-md"
-                            title="Remove Photo"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Camera Control Buttons */}
-                    <div className="mt-3.5 flex flex-wrap gap-2 justify-center">
-                      {isCameraActive ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={captureSnapshot}
-                            className="py-1.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
-                          >
-                            <Camera className="w-4 h-4" /> Capture Snapshot
-                          </button>
-                          <button
-                            type="button"
-                            onClick={stopCamera}
-                            className="py-1.5 px-4 bg-slate-600 hover:bg-slate-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer transition-colors"
-                          >
-                            <X className="w-4 h-4" /> Cancel
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={startCamera}
-                            className="py-1.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100/50 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <Camera className="w-4 h-4" /> Start Camera
-                          </button>
-                          
-                          <label className="py-1.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-all cursor-pointer">
-                            <Upload className="w-4 h-4 text-slate-500" /> Upload Photo
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleFileUpload}
-                              className="hidden"
-                            />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">
+                            First Name / Given Name <span className="text-rose-500">*</span>
                           </label>
-                        </>
+                          <input 
+                            type="text" 
+                            required
+                            value={formFirstName}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormFirstName(val);
+                              setFormName(`${val} ${formLastName}`.trim());
+                            }}
+                            placeholder="e.g. Samuel"
+                            className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Last Name / Surname <span className="text-rose-500">*</span>
+                          </label>
+                          <input 
+                            type="text" 
+                            required
+                            value={formLastName}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormLastName(val);
+                              setFormName(`${formFirstName} ${val}`.trim());
+                            }}
+                            placeholder="e.g. Kargbo"
+                            className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Official Formatted Name Preview */}
+                      <div className="flex items-center justify-between text-xs bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-2xs">
+                        <span className="text-slate-500 font-medium">Official Name on Records:</span>
+                        <span className="font-bold text-indigo-700">
+                          {formName.trim() || `${formFirstName} ${formLastName}`.trim() || (
+                            <span className="italic text-slate-400 font-normal">Enter first and last name</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Photo + Date of Birth + Gender in one compact row */}
+                    <div className="flex flex-col sm:flex-row gap-4 items-start pt-3 border-t border-slate-200/60">
+                      {/* Compact Profile Photo */}
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="relative w-20 h-20 rounded-xl bg-slate-200 border border-slate-300 overflow-hidden flex items-center justify-center group shadow-inner shrink-0">
+                          {isCameraActive ? (
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                          ) : formProfileImage ? (
+                            <img
+                              src={formProfileImage}
+                              alt="Preview"
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="text-slate-400 text-center flex flex-col items-center justify-center p-1">
+                              <Image className="w-6 h-6 text-slate-300 mb-0.5" />
+                              <span className="text-[9px] font-semibold text-slate-400">No Photo</span>
+                            </div>
+                          )}
+
+                          {!isCameraActive && formProfileImage && (
+                            <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button
+                                type="button"
+                                onClick={() => setFormProfileImage(undefined)}
+                                className="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer"
+                                title="Remove Photo"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Student Photo</span>
+                          {isCameraActive ? (
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={captureSnapshot}
+                                className="py-1 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Camera className="w-3 h-3" /> Snap
+                              </button>
+                              <button
+                                type="button"
+                                onClick={stopCamera}
+                                className="py-1 px-2 bg-slate-600 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg cursor-pointer transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                              <button
+                                type="button"
+                                onClick={startCamera}
+                                className="py-1 px-2.5 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+                              >
+                                <Camera className="w-3 h-3" /> Camera
+                              </button>
+                              <label className="py-1 px-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer transition-colors">
+                                <Upload className="w-3 h-3 text-slate-500" /> Upload
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleFileUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          )}
+                          {cameraError && (
+                            <p className="text-[10px] text-rose-500 font-medium">{cameraError}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* DOB & Gender */}
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">Date of Birth</label>
+                          <input 
+                            type="date" 
+                            value={formDob}
+                            onChange={(e) => setFormDob(e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 text-slate-700"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">Gender</label>
+                          <div className="flex gap-4 pt-2">
+                            <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="gender" 
+                                checked={formGender === 'Male'} 
+                                onChange={() => setFormGender('Male')} 
+                                className="text-indigo-600 focus:ring-indigo-500"
+                              />
+                              Male
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                              <input 
+                                type="radio" 
+                                name="gender" 
+                                checked={formGender === 'Female'} 
+                                onChange={() => setFormGender('Female')}
+                                className="text-indigo-600 focus:ring-indigo-500"
+                              />
+                              Female
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. ACADEMIC ENROLLMENT SECTION */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-indigo-600" /> Academic Placement
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Class Level */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-600">Class Level <span className="text-rose-500">*</span></label>
+                        <select
+                          value={formClass}
+                          onChange={(e) => {
+                            const val = e.target.value as StudentClass;
+                            setFormClass(val);
+                            if (val.startsWith('SSS') && !formStream) {
+                              setFormStream('Science');
+                            } else if (!val.startsWith('SSS')) {
+                              setFormStream(undefined);
+                            }
+                          }}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 bg-white"
+                        >
+                          {CLASSES_LIST.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Stream (conditional for SSS) */}
+                      {formClass.startsWith('SSS') ? (
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">Academic Stream</label>
+                          <select
+                            value={formStream || 'Science'}
+                            onChange={(e) => setFormStream(e.target.value as SSSStream)}
+                            className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 bg-white"
+                          >
+                            {SSS_STREAMS.map(s => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">Class Section / Arm</label>
+                          <input 
+                            type="text" 
+                            value={formSection}
+                            onChange={(e) => setFormSection(e.target.value)}
+                            placeholder="e.g. A, B, Alpha, Blue"
+                            className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
+                          />
+                        </div>
                       )}
-                    </div>
-                    
-                    {cameraError && (
-                      <p className="text-[10px] text-rose-500 font-semibold mt-2">{cameraError}</p>
-                    )}
-                  </div>
 
-                  {/* Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Student Full Name <span className="text-rose-500">*</span></label>
-                    <input 
-                      type="text" 
-                      required
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      placeholder="e.g. Samuel Kargbo"
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
-                    />
-                  </div>
+                      {/* If SSS, show Section here */}
+                      {formClass.startsWith('SSS') && (
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">Class Section / Arm</label>
+                          <input 
+                            type="text" 
+                            value={formSection}
+                            onChange={(e) => setFormSection(e.target.value)}
+                            placeholder="e.g. A, B, Alpha, Blue"
+                            className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
+                          />
+                        </div>
+                      )}
 
-                  {/* DOB */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Date of Birth</label>
-                    <input 
-                      type="date" 
-                      value={formDob}
-                      onChange={(e) => setFormDob(e.target.value)}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
-                    />
-                  </div>
-
-                  {/* Gender */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Gender</label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer">
+                      {/* Admission Year */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-600">Admission Enrollment Year</label>
                         <input 
-                          type="radio" 
-                          name="gender" 
-                          checked={formGender === 'Male'} 
-                          onChange={() => setFormGender('Male')} 
-                          className="text-indigo-600 focus:ring-indigo-500"
+                          type="number" 
+                          value={formEnrollmentYear}
+                          onChange={(e) => setFormEnrollmentYear(parseInt(e.target.value) || new Date().getFullYear())}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
                         />
-                        Male
-                      </label>
-                      <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer">
+                      </div>
+
+                      {/* Status */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-600">Enrollment Status</label>
+                        <select
+                          value={formStatus}
+                          onChange={(e) => setFormStatus(e.target.value as any)}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 bg-white"
+                        >
+                          <option value="Active">Active</option>
+                          <option value="Transferred">Transferred</option>
+                          <option value="Graduated">Graduated</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. PARENT & GUARDIAN DETAILS */}
+                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-indigo-600" /> Parent / Guardian Information
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Parent Name */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-600">Parent / Guardian Full Name <span className="text-rose-500">*</span></label>
                         <input 
-                          type="radio" 
-                          name="gender" 
-                          checked={formGender === 'Female'} 
-                          onChange={() => setFormGender('Female')}
-                          className="text-indigo-600 focus:ring-indigo-500"
+                          type="text" 
+                          required
+                          value={formParentName}
+                          onChange={(e) => setFormParentName(e.target.value)}
+                          placeholder="e.g. Alhaji Kargbo"
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
                         />
-                        Female
-                      </label>
+                      </div>
+
+                      {/* Parent Phone */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-600">Parent Phone Contact <span className="text-rose-500">*</span></label>
+                        <input 
+                          type="text" 
+                          required
+                          value={formParentPhone}
+                          onChange={(e) => setFormParentPhone(e.target.value)}
+                          placeholder="e.g. +232 76 XXXXXX"
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
+                        />
+                      </div>
+
+                      {/* Address */}
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-xs font-semibold text-slate-600">Home Address</label>
+                        <textarea 
+                          value={formAddress}
+                          onChange={(e) => setFormAddress(e.target.value)}
+                          placeholder="e.g. 12 Wilkinson Road, Freetown"
+                          rows={2}
+                          className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  {/* Class Level */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Class Level</label>
-                    <select
-                      value={formClass}
-                      onChange={(e) => {
-                        const val = e.target.value as StudentClass;
-                        setFormClass(val);
-                        if (val.startsWith('SSS') && !formStream) {
-                          setFormStream('Science');
-                        } else if (!val.startsWith('SSS')) {
-                          setFormStream(undefined);
-                        }
-                      }}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 bg-white"
-                    >
-                      {CLASSES_LIST.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Stream (conditional) */}
-                  {formClass.startsWith('SSS') && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500">Academic Stream</label>
-                      <select
-                        value={formStream || 'Science'}
-                        onChange={(e) => setFormStream(e.target.value as SSSStream)}
-                        className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 bg-white"
-                      >
-                        {SSS_STREAMS.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* Section / Arms */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Class Section / Arm</label>
-                    <input 
-                      type="text" 
-                      value={formSection}
-                      onChange={(e) => setFormSection(e.target.value)}
-                      placeholder="e.g. A, B, Alpha, Blue"
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
-                    />
-                  </div>
-
-                  {/* Parent Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Parent / Guardian Full Name <span className="text-rose-500">*</span></label>
-                    <input 
-                      type="text" 
-                      required
-                      value={formParentName}
-                      onChange={(e) => setFormParentName(e.target.value)}
-                      placeholder="e.g. Alhaji Kargbo"
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
-                    />
-                  </div>
-
-                  {/* Parent Phone */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Parent Phone Contact <span className="text-rose-500">*</span></label>
-                    <input 
-                      type="text" 
-                      required
-                      value={formParentPhone}
-                      onChange={(e) => setFormParentPhone(e.target.value)}
-                      placeholder="e.g. +232 76 XXXXXX"
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
-                    />
-                  </div>
-
-                  {/* Address */}
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Home Address</label>
-                    <textarea 
-                      value={formAddress}
-                      onChange={(e) => setFormAddress(e.target.value)}
-                      placeholder="e.g. 12 Wilkinson Road, Freetown"
-                      rows={2}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
-                    />
-                  </div>
-
-                  {/* Admission Year */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Admission Enrollment Year</label>
-                    <input 
-                      type="number" 
-                      value={formEnrollmentYear}
-                      onChange={(e) => setFormEnrollmentYear(parseInt(e.target.value) || new Date().getFullYear())}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
-                    />
-                  </div>
-
-                  {/* Status */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Status</label>
-                    <select
-                      value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value as any)}
-                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 bg-white"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Transferred">Transferred</option>
-                      <option value="Graduated">Graduated</option>
-                    </select>
-                  </div>
-
-                  {/* Medical & Emergency Details Section */}
-                  <div className="sm:col-span-2 mt-4 pt-4 border-t border-slate-100">
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  {/* 4. MEDICAL & EMERGENCY DETAILS */}
+                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Heart className="w-4 h-4 text-rose-500" /> Medical & Emergency Records
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Blood Type */}
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-500">Blood Type</label>
+                        <label className="text-xs font-semibold text-slate-600">Blood Type</label>
                         <select
                           value={formBloodType}
                           onChange={(e) => setFormBloodType(e.target.value)}
@@ -1029,7 +1135,7 @@ export default function StudentList({
 
                       {/* Allergies */}
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-500">Known Allergies</label>
+                        <label className="text-xs font-semibold text-slate-600">Known Allergies</label>
                         <input 
                           type="text" 
                           value={formAllergies}
@@ -1041,7 +1147,7 @@ export default function StudentList({
 
                       {/* Emergency Contact Name */}
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-500">Emergency Contact Name</label>
+                        <label className="text-xs font-semibold text-slate-600">Emergency Contact Name</label>
                         <input 
                           type="text" 
                           value={formEmergencyName}
@@ -1054,7 +1160,7 @@ export default function StudentList({
                       {/* Emergency Contact Phone & Relation */}
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500">Contact Phone</label>
+                          <label className="text-xs font-semibold text-slate-600">Contact Phone</label>
                           <input 
                             type="text" 
                             value={formEmergencyPhone}
@@ -1064,7 +1170,7 @@ export default function StudentList({
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-500">Relation</label>
+                          <label className="text-xs font-semibold text-slate-600">Relation</label>
                           <input 
                             type="text" 
                             value={formEmergencyRelation}
@@ -1078,20 +1184,20 @@ export default function StudentList({
                   </div>
                 </div>
 
-                {/* Submit row */}
-                <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                {/* Submit row (Fixed at bottom) */}
+                <div className="p-4 sm:px-6 bg-slate-50 border-t border-slate-100 flex justify-end items-center gap-3 shrink-0">
                   <button 
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="py-2 px-4 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
+                    className="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-white transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button 
                     type="submit"
-                    className="py-2 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    className="py-2.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
-                    <Check className="w-4 h-4" /> Save Record
+                    <Check className="w-4 h-4" /> {editingStudent ? 'Update Student File' : 'Complete Registration'}
                   </button>
                 </div>
               </form>

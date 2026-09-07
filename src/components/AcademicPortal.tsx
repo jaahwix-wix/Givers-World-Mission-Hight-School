@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Award, 
   Edit3, 
@@ -16,8 +16,25 @@ import {
   AlertTriangle,
   Lightbulb,
   Search,
-  BookMarked
+  BookMarked,
+  TrendingUp,
+  TrendingDown,
+  LineChart as LineChartIcon,
+  CheckCircle2,
+  Target,
+  Sparkles
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ReferenceLine 
+} from 'recharts';
 import { Student, StudentAcademicRecord, NationalExamPrep, SubjectGrade, StudentClass } from '../types';
 import { CLASSES_LIST, getSubjectsForClass, calculateGrade } from '../constants';
 
@@ -59,6 +76,7 @@ export default function AcademicPortal({
   
   const [selectedTerm, setSelectedTerm] = useState<1 | 2 | 3>(3);
   const [isEditingMarks, setIsEditingMarks] = useState(false);
+  const [trendViewMode, setTrendViewMode] = useState<'overall' | 'subjects'>('overall');
 
   // Load the selected record or create a blank one if missing (defensive)
   const activeRecord = records.find(r => r.studentId === selectedStudentId);
@@ -70,6 +88,94 @@ export default function AcademicPortal({
   const [editPrincipalRemarks, setEditPrincipalRemarks] = useState('');
   const [editConduct, setEditConduct] = useState('');
   const [editAttendance, setEditAttendance] = useState({ totalDays: 70, presentDays: 65 });
+
+  // Terminal Performance Trend Data (Term 1, Term 2, Term 3) for the Recharts Line Graph
+  const terminalTrendData = useMemo(() => {
+    if (!activeRecord || !activeStudent) return [];
+
+    const terms: Array<1 | 2 | 3> = [1, 2, 3];
+    
+    // Class peers for benchmark comparison
+    const classRecords = records.filter(r => {
+      const st = students.find(s => s.id === r.studentId);
+      return st && st.currentClass === activeStudent.currentClass && st.status === 'Active';
+    });
+
+    return terms.map(termNum => {
+      const termPerf = activeRecord.terms[termNum];
+      const studentGrades = termPerf?.grades || [];
+      const studentAvg = studentGrades.length > 0
+        ? Math.round(studentGrades.reduce((sum, g) => sum + g.totalScore, 0) / studentGrades.length)
+        : null;
+
+      // Class average for this term
+      let classSum = 0;
+      let classCount = 0;
+      classRecords.forEach(cr => {
+        const cGrades = cr.terms[termNum]?.grades || [];
+        if (cGrades.length > 0) {
+          classSum += cGrades.reduce((s, g) => s + g.totalScore, 0) / cGrades.length;
+          classCount++;
+        }
+      });
+      const classAvg = classCount > 0 ? Math.round(classSum / classCount) : null;
+
+      // Attendance rate for this term
+      const attendance = termPerf?.attendance;
+      const attendanceRate = attendance && attendance.totalDays > 0
+        ? Math.round((attendance.presentDays / attendance.totalDays) * 100)
+        : null;
+
+      // Subject scores across terms for subject breakdown mode
+      const mathScore = studentGrades.find(g => g.subject.toLowerCase().includes('math'))?.totalScore ?? null;
+      const engScore = studentGrades.find(g => g.subject.toLowerCase().includes('english'))?.totalScore ?? null;
+      const sciScore = studentGrades.find(g => g.subject.toLowerCase().includes('science'))?.totalScore ?? null;
+      const socScore = studentGrades.find(g => g.subject.toLowerCase().includes('social'))?.totalScore ?? null;
+
+      return {
+        term: `Term ${termNum}`,
+        termNum,
+        studentAverage: studentAvg,
+        classAverage: classAvg,
+        benchmarkPass: 50,
+        attendanceRate,
+        presentDays: attendance?.presentDays || 0,
+        totalDays: attendance?.totalDays || 0,
+        mathematics: mathScore,
+        english: engScore,
+        science: sciScore,
+        socialStudies: socScore
+      };
+    });
+  }, [activeRecord, activeStudent, records, students]);
+
+  // Overall metrics derived from trend data
+  const trendMetrics = useMemo(() => {
+    const validScores = terminalTrendData
+      .map(d => d.studentAverage)
+      .filter((s): s is number => typeof s === 'number' && !isNaN(s));
+
+    if (validScores.length === 0) {
+      return { yearAverage: 0, highestTerm: 'N/A', delta: 0, status: 'No Data', isPositive: true };
+    }
+
+    const yearAverage = Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length);
+    const maxScore = Math.max(...validScores);
+    const highestTermItem = terminalTrendData.find(d => d.studentAverage === maxScore);
+    const highestTerm = highestTermItem ? `${highestTermItem.term} (${maxScore}%)` : 'N/A';
+
+    const firstTermScore = terminalTrendData[0]?.studentAverage ?? validScores[0];
+    const latestTermScore = validScores[validScores.length - 1];
+    const delta = latestTermScore - firstTermScore;
+
+    return {
+      yearAverage,
+      highestTerm,
+      delta,
+      status: delta > 0 ? `+${delta}% Growth` : delta < 0 ? `${delta}% Decline` : 'Consistent (0%)',
+      isPositive: delta >= 0
+    };
+  }, [terminalTrendData]);
 
   // Handle student select change
   const handleStudentSelect = (id: string) => {
@@ -435,6 +541,259 @@ export default function AcademicPortal({
                       </div>
                     </div>
                   )}
+
+                  {/* RECHARTS VISUALIZATION: Terminal Grade Average Trend Over Academic Year */}
+                  <div className="bg-slate-50/80 rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-4" id="terminal-grade-trend-chart-panel">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700">
+                            <LineChartIcon className="w-4 h-4" />
+                          </div>
+                          <h4 className="font-bold text-slate-900 text-sm">Terminal Grade Average Trend (2025/2026)</h4>
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            Recharts
+                          </span>
+                        </div>
+                        <p className="text-slate-500 text-xs mt-0.5">
+                          Term-by-term score trajectory for {activeStudent.name} compared with {selectedClass} class benchmark
+                        </p>
+                      </div>
+
+                      {/* Mode Switcher */}
+                      <div className="flex items-center bg-white border border-slate-200 p-1 rounded-xl text-xs font-semibold self-start sm:self-auto shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => setTrendViewMode('overall')}
+                          className={`px-3 py-1 rounded-lg transition-all cursor-pointer text-xs ${
+                            trendViewMode === 'overall'
+                              ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Overall Average
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTrendViewMode('subjects')}
+                          className={`px-3 py-1 rounded-lg transition-all cursor-pointer text-xs ${
+                            trendViewMode === 'subjects'
+                              ? 'bg-indigo-600 text-white font-bold shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          Core Subjects
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Key Metrics Strip */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Cumulative Average</span>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                          <span className="text-base font-black text-indigo-700">{trendMetrics.yearAverage}%</span>
+                          <span className="text-[10px] text-slate-500 font-semibold">
+                            {calculateGrade(trendMetrics.yearAverage, selectedClass)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Best Terminal Mark</span>
+                        <span className="text-sm font-black text-slate-800 mt-0.5 block truncate">
+                          {trendMetrics.highestTerm}
+                        </span>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Annual Trajectory</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {trendMetrics.isPositive ? (
+                            <TrendingUp className="w-4 h-4 text-emerald-600 shrink-0" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-rose-600 shrink-0" />
+                          )}
+                          <span className={`text-xs font-black ${trendMetrics.isPositive ? 'text-emerald-700' : 'text-rose-700'}`}>
+                            {trendMetrics.status}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Passing Benchmark</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Target className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="text-xs font-bold text-slate-700">50% Minimum</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Recharts Line Chart Container */}
+                    <div className="h-56 w-full bg-white rounded-xl p-3 border border-slate-200/70 shadow-2xs">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={terminalTrendData}
+                          margin={{ top: 12, right: 16, left: -20, bottom: 4 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis 
+                            dataKey="term" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
+                          />
+                          <YAxis 
+                            domain={[0, 100]} 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fill: '#64748b', fontSize: 10 }}
+                            unit="%"
+                          />
+                          <Tooltip 
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-slate-900 text-white p-3 rounded-xl shadow-xl border border-slate-800 text-xs space-y-1.5 min-w-[210px]">
+                                    <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                                      <span className="font-extrabold text-indigo-300">{label} Performance</span>
+                                      <span className="text-[10px] text-slate-400">AY 2025/2026</span>
+                                    </div>
+
+                                    {trendViewMode === 'overall' ? (
+                                      <>
+                                        <div className="flex justify-between items-center pt-0.5">
+                                          <span className="text-slate-300">Student Average:</span>
+                                          <span className="text-emerald-400 font-black text-sm">
+                                            {data.studentAverage !== null ? `${data.studentAverage}%` : 'Pending'}
+                                          </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-300 text-[11px]">
+                                          <span>Class Benchmark:</span>
+                                          <span className="font-semibold text-slate-200">
+                                            {data.classAverage !== null ? `${data.classAverage}%` : 'N/A'}
+                                          </span>
+                                        </div>
+                                        {data.studentAverage !== null && data.classAverage !== null && (
+                                          <div className="flex justify-between items-center text-[10px] text-indigo-300 pt-1 border-t border-slate-800">
+                                            <span>Deviation:</span>
+                                            <span className="font-bold">
+                                              {data.studentAverage >= data.classAverage ? `+${data.studentAverage - data.classAverage}% Above` : `${data.studentAverage - data.classAverage}% Below`}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {data.attendanceRate !== null && (
+                                          <div className="flex justify-between items-center text-[10px] text-slate-400">
+                                            <span>Attendance:</span>
+                                            <span>{data.attendanceRate}% ({data.presentDays}/{data.totalDays} Days)</span>
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <div className="space-y-1 pt-0.5">
+                                        <div className="flex justify-between text-[11px]">
+                                          <span className="text-blue-300">Mathematics:</span>
+                                          <span className="font-bold text-white">{data.mathematics ?? 'N/A'}%</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                          <span className="text-purple-300">English Language:</span>
+                                          <span className="font-bold text-white">{data.english ?? 'N/A'}%</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                          <span className="text-emerald-300">Integrated Science:</span>
+                                          <span className="font-bold text-white">{data.science ?? 'N/A'}%</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                          <span className="text-amber-300">Social Studies:</span>
+                                          <span className="font-bold text-white">{data.socialStudies ?? 'N/A'}%</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend 
+                            wrapperStyle={{ paddingTop: '8px', fontSize: '11px', fontWeight: 600 }}
+                            iconType="circle"
+                          />
+                          <ReferenceLine 
+                            y={50} 
+                            stroke="#f59e0b" 
+                            strokeDasharray="3 3" 
+                            label={{ value: 'Pass Benchmark (50%)', fill: '#d97706', fontSize: 10, position: 'insideBottomRight' }}
+                          />
+
+                          {trendViewMode === 'overall' ? (
+                            <>
+                              <Line
+                                type="monotone"
+                                dataKey="studentAverage"
+                                name="Student Terminal Average"
+                                stroke="#4f46e5"
+                                strokeWidth={3}
+                                dot={{ fill: '#4f46e5', r: 5, strokeWidth: 2, stroke: '#ffffff' }}
+                                activeDot={{ r: 7, stroke: '#4f46e5', strokeWidth: 2, fill: '#ffffff' }}
+                                connectNulls
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="classAverage"
+                                name="Class Benchmark Average"
+                                stroke="#10b981"
+                                strokeWidth={2}
+                                strokeDasharray="4 4"
+                                dot={{ fill: '#10b981', r: 4 }}
+                                connectNulls
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <Line
+                                type="monotone"
+                                dataKey="mathematics"
+                                name="Mathematics"
+                                stroke="#3b82f6"
+                                strokeWidth={2.5}
+                                dot={{ fill: '#3b82f6', r: 4 }}
+                                connectNulls
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="english"
+                                name="English Language"
+                                stroke="#8b5cf6"
+                                strokeWidth={2.5}
+                                dot={{ fill: '#8b5cf6', r: 4 }}
+                                connectNulls
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="science"
+                                name="Integrated Science"
+                                stroke="#10b981"
+                                strokeWidth={2.5}
+                                dot={{ fill: '#10b981', r: 4 }}
+                                connectNulls
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="socialStudies"
+                                name="Social Studies"
+                                stroke="#f59e0b"
+                                strokeWidth={2.5}
+                                dot={{ fill: '#f59e0b', r: 4 }}
+                                connectNulls
+                              />
+                            </>
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
 
                   {/* Grades Table */}
                   <div className="overflow-x-auto">

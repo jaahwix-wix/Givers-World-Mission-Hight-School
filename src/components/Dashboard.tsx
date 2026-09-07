@@ -20,7 +20,17 @@ import {
   CreditCard,
   ChevronRight,
   User,
-  ArrowRight
+  ArrowRight,
+  Send,
+  Mail,
+  MessageSquare,
+  Bell,
+  Phone,
+  Copy,
+  X,
+  Clock,
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -138,6 +148,138 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
   const [pendingTermFilter, setPendingTermFilter] = useState<1 | 2 | 3>(3);
   const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [pendingStatusFilter, setPendingStatusFilter] = useState<'All' | 'Unpaid' | 'Partial'>('All');
+
+  // Automated Guardian Notification System State
+  const [notifiedLog, setNotifiedLog] = useState<Record<string, { timestamp: string; channel: 'SMS' | 'Email' }>>({});
+  const [noticeModal, setNoticeModal] = useState<{
+    isOpen: boolean;
+    student?: Student;
+    balance?: number;
+    totalDue?: number;
+    term?: number;
+    status?: 'Unpaid' | 'Partial';
+    isBulk?: boolean;
+  }>({ isOpen: false });
+  const [noticeChannel, setNoticeChannel] = useState<'sms' | 'email'>('sms');
+  const [noticeMessageText, setNoticeMessageText] = useState('');
+  const [copiedNotice, setCopiedNotice] = useState(false);
+  const [noticeToast, setNoticeToast] = useState<string | null>(null);
+
+  // Helper to generate notification templates
+  const generateNoticeContent = (
+    channel: 'sms' | 'email', 
+    student: Student, 
+    balance: number, 
+    totalDue: number, 
+    term: number
+  ) => {
+    if (channel === 'sms') {
+      return `GIVERS WORLD MISSION NOTICE: Dear ${student.parentName}, outstanding tuition fees of SLE ${balance.toLocaleString()} for ${student.name} (${student.currentClass}, Term ${term}) remain UNPAID. Kindly settle promptly via Orange Money (031258528) or at the school Bursary in Kambia. Thank you. Evang. Saint Turay, Principal.`;
+    } else {
+      return `Subject: Urgent: Tuition Fee Overdue Notice - ${student.name} (Term ${term})
+
+Dear ${student.parentName},
+
+This is an official communication from the Bursary & Accounts Office of Givers World Mission (Kambia 2, Northern Province, Sierra Leone).
+
+We wish to inform you that tuition fees for your child/ward remain unpaid for the current academic session:
+
+• Student Name: ${student.name}
+• Admission Number: ${student.admissionNumber}
+• Class: ${student.currentClass}
+• Academic Term: Term ${term} (2025/2026 Academic Year)
+• Total Term Dues: SLE ${totalDue.toLocaleString()}
+• Outstanding Overdue Balance: SLE ${balance.toLocaleString()}
+
+PAYMENT OPTIONS:
+1. Orange Money / Africell Money: 031258528 (Reference: ${student.admissionNumber})
+2. Zenith Bank SL / Rokel Commercial Bank (School Account)
+3. School Bursary Office (Mon-Fri 8:00 AM - 4:00 PM)
+
+Please disregard this notice if payment has been made in the last 24 hours. For verification, contact our accounts office at ${SCHOOL_INFO.phone}.
+
+Yours faithfully,
+Evangelist Saint Turay
+Principal & Co-Founder, Givers World Mission`;
+    }
+  };
+
+  // Open modal for single student
+  const handleOpenNotice = (
+    e: React.MouseEvent,
+    student: Student,
+    balance: number,
+    totalDue: number,
+    term: number,
+    status: 'Unpaid' | 'Partial'
+  ) => {
+    e.stopPropagation();
+    const defaultText = generateNoticeContent(noticeChannel, student, balance, totalDue, term);
+    setNoticeMessageText(defaultText);
+    setNoticeModal({
+      isOpen: true,
+      student,
+      balance,
+      totalDue,
+      term,
+      status,
+      isBulk: false
+    });
+  };
+
+  // Open modal for bulk notification
+  const handleOpenBulkNotice = () => {
+    const unpaidOnly = pendingFeeStudents.filter(s => s.status === 'Unpaid');
+    setNoticeModal({
+      isOpen: true,
+      term: pendingTermFilter,
+      isBulk: true
+    });
+    setNoticeMessageText(
+      `GIVERS WORLD MISSION BATCH NOTICE: Dear Guardian, tuition fees for Term ${pendingTermFilter} are overdue. Kindly settle outstanding balance via Orange Money (031258528) or at the school Bursary before examinations commence. Thank you.`
+    );
+  };
+
+  // Switch channel in modal
+  const handleChannelSwitch = (channel: 'sms' | 'email') => {
+    setNoticeChannel(channel);
+    if (noticeModal.student && noticeModal.balance !== undefined && noticeModal.totalDue !== undefined && noticeModal.term !== undefined) {
+      setNoticeMessageText(generateNoticeContent(channel, noticeModal.student, noticeModal.balance, noticeModal.totalDue, noticeModal.term));
+    }
+  };
+
+  // Dispatch notice
+  const handleDispatchNotice = () => {
+    if (noticeModal.isBulk) {
+      const unpaidOnly = pendingFeeStudents.filter(s => s.status === 'Unpaid');
+      const newLogs = { ...notifiedLog };
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      unpaidOnly.forEach(item => {
+        newLogs[item.student.id] = { timestamp: now, channel: noticeChannel === 'sms' ? 'SMS' : 'Email' };
+      });
+      setNotifiedLog(newLogs);
+      setNoticeToast(`Dispatched automated ${noticeChannel.toUpperCase()} reminders to ${unpaidOnly.length} guardians.`);
+      setTimeout(() => setNoticeToast(null), 4500);
+      setNoticeModal({ isOpen: false });
+    } else if (noticeModal.student) {
+      const studentId = noticeModal.student.id;
+      const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setNotifiedLog(prev => ({
+        ...prev,
+        [studentId]: { timestamp: now, channel: noticeChannel === 'sms' ? 'SMS' : 'Email' }
+      }));
+      setNoticeToast(`Overdue fee ${noticeChannel.toUpperCase()} notification delivered to ${noticeModal.student.parentName} (${noticeModal.student.parentPhone}).`);
+      setTimeout(() => setNoticeToast(null), 4500);
+      setNoticeModal({ isOpen: false });
+    }
+  };
+
+  // Copy notice text
+  const handleCopyNotice = () => {
+    navigator.clipboard.writeText(noticeMessageText);
+    setCopiedNotice(true);
+    setTimeout(() => setCopiedNotice(false), 2000);
+  };
 
   // Identifies active students with 'Unpaid' or 'Partial' fee status for the selected term
   const pendingFeeStudents = useMemo(() => {
@@ -755,20 +897,30 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
               </div>
             </div>
 
-            {/* Term Summary Pill */}
-            <div className="flex items-center justify-between p-3 bg-amber-50/60 border border-amber-100 rounded-xl mb-4 text-xs">
-              <div className="flex items-center gap-1.5 font-bold text-amber-900">
+            {/* Term Summary Pill & Bulk Trigger */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-amber-50/70 border border-amber-200 rounded-xl mb-4 text-xs gap-2">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>Term {pendingTermFilter} Outstanding:</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <span className="px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-extrabold text-[11px]">
                   {pendingFeeStudents.length} {pendingFeeStudents.length === 1 ? 'Student' : 'Students'}
                 </span>
-                <span className="font-extrabold text-slate-800">
+                <span className="font-extrabold text-slate-800 ml-1">
                   SLE {totalPendingBalanceForTerm.toLocaleString()}
                 </span>
               </div>
+
+              {pendingFeeStudents.filter(s => s.status === 'Unpaid').length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleOpenBulkNotice}
+                  className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
+                  title="Open automated batch notification dialog for all unpaid students"
+                >
+                  <Send className="w-3 h-3" />
+                  <span>Notify All Unpaid ({pendingFeeStudents.filter(s => s.status === 'Unpaid').length})</span>
+                </button>
+              )}
             </div>
 
             {/* Search & Status Filter Controls */}
@@ -802,13 +954,17 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
             </div>
 
             {/* Scrollable List of Pending Fee Students */}
-            <div className="space-y-2.5 max-h-[280px] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
               {filteredPendingList.length > 0 ? (
                 filteredPendingList.map((item) => (
                   <div
                     key={item.student.id}
                     onClick={() => onNavigate('fees', { studentId: item.student.id, term: item.term })}
-                    className="p-3 rounded-xl border border-slate-100 hover:border-indigo-200 bg-slate-50/50 hover:bg-indigo-50/20 transition-all cursor-pointer group flex flex-col gap-2"
+                    className={`p-3 rounded-xl border transition-all cursor-pointer group flex flex-col gap-2 ${
+                      item.status === 'Unpaid'
+                        ? 'bg-rose-50/30 border-rose-200/80 hover:border-rose-300'
+                        : 'bg-slate-50/50 border-slate-100 hover:border-indigo-200'
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -826,27 +982,42 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
                         )}
 
                         <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
-                            {item.student.name}
-                          </h4>
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-xs text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
+                              {item.student.name}
+                            </h4>
+                            {item.status === 'Unpaid' && (
+                              <span className="shrink-0 px-1.5 py-0.2 text-[9px] font-black uppercase rounded bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-0.5">
+                                <ShieldAlert className="w-2.5 h-2.5 text-rose-600 animate-pulse" />
+                                Overdue
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-400 font-medium truncate">
-                            {item.student.currentClass} • ID: <span className="font-mono">{item.student.admissionNumber}</span>
+                            {item.student.currentClass} • Guardian: {item.student.parentName} ({item.student.parentPhone})
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold ${
-                          item.status === 'Unpaid' 
-                            ? 'bg-rose-100 text-rose-800 border border-rose-200' 
-                            : 'bg-amber-100 text-amber-800 border border-amber-200'
-                        }`}>
-                          {item.status}
-                        </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {/* Notify Guardian Button for Unpaid/Pending */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenNotice(e, item.student, item.balance, item.totalDue, item.term, item.status)}
+                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            notifiedLog[item.student.id]
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                              : 'bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300'
+                          }`}
+                          title={notifiedLog[item.student.id] ? `Notice sent at ${notifiedLog[item.student.id].timestamp}` : 'Send SMS or Email notice to guardian'}
+                        >
+                          <Bell className={`w-3 h-3 ${notifiedLog[item.student.id] ? 'text-emerald-600' : 'text-rose-600'}`} />
+                          <span>{notifiedLog[item.student.id] ? 'Notified' : 'Notify'}</span>
+                        </button>
 
                         <button
                           type="button"
-                          className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-0.5"
+                          className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-0.5 shadow-2xs"
                           title="Collect payment or view ledger"
                         >
                           <span>Collect</span>
@@ -856,7 +1027,7 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
                     </div>
 
                     {/* Progress & Financial details */}
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1.5 border-t border-slate-100 font-medium">
+                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1.5 border-t border-slate-200/50 font-medium">
                       <span>Paid: <strong className="text-slate-700">SLE {item.paidAmount.toLocaleString()}</strong> / {item.totalDue.toLocaleString()}</span>
                       <span className="text-rose-600 font-bold">Balance: SLE {item.balance.toLocaleString()}</span>
                     </div>
@@ -967,6 +1138,182 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
           </div>
         </div>
       </div>
+
+      {/* AUTOMATED NOTIFICATION MODAL */}
+      {noticeModal.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-600/40 text-indigo-300 rounded-xl border border-indigo-500/30">
+                  <Bell className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm sm:text-base text-white">Automated Guardian Fee Notification</h3>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    {noticeModal.isBulk 
+                      ? `Batch notification for all Unpaid Term ${noticeModal.term} accounts` 
+                      : `${noticeModal.student?.name} • Guardian: ${noticeModal.student?.parentName}`}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setNoticeModal({ isOpen: false })}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Channel Selector */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => handleChannelSwitch('sms')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    noticeChannel === 'sms'
+                      ? 'bg-white text-indigo-600 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>SMS Gateway (Africell / Orange)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleChannelSwitch('email')}
+                  className={`flex-1 py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    noticeChannel === 'email'
+                      ? 'bg-white text-indigo-600 shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Formal Email Notice</span>
+                </button>
+              </div>
+
+              {/* Recipient & Balance Snapshot */}
+              {noticeModal.student ? (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Guardian & Phone</span>
+                    <p className="font-bold text-slate-800 mt-0.5">{noticeModal.student.parentName}</p>
+                    <p className="font-mono text-slate-500 text-[11px]">{noticeModal.student.parentPhone}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">Overdue Balance</span>
+                    <p className="font-black text-rose-700 text-sm mt-0.5">
+                      SLE {noticeModal.balance?.toLocaleString()}
+                    </p>
+                    <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                      Term {noticeModal.term} Overdue
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <AlertCircle className="w-4 h-4 text-amber-600" />
+                    <span>Batch Mode: All Unpaid Students in Term {noticeModal.term}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600">
+                    This notification template will be addressed and dispatched to guardians of all {pendingFeeStudents.filter(s => s.status === 'Unpaid').length} unpaid students with individualized balance references.
+                  </p>
+                </div>
+              )}
+
+              {/* Editable Notification Template */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <label className="font-bold text-slate-700">Notification Message Template</label>
+                  <span className="text-[10px] text-slate-400">
+                    {noticeMessageText.length} characters • {noticeChannel === 'sms' ? `${Math.ceil(noticeMessageText.length / 160)} SMS Parts` : 'Email Draft'}
+                  </span>
+                </div>
+                <textarea
+                  value={noticeMessageText}
+                  onChange={(e) => setNoticeMessageText(e.target.value)}
+                  rows={noticeChannel === 'sms' ? 4 : 8}
+                  className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-800 font-sans focus:outline-none focus:border-indigo-500 leading-relaxed resize-none"
+                  placeholder="Notification content..."
+                />
+              </div>
+
+              {/* Payment Methods Info Callout */}
+              <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-start gap-2 text-xs text-indigo-900">
+                <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <span className="font-bold">Sierra Leone Payment Channels:</span> Notice directs guardians to Orange Money (031258528), Africell Money, or the Kambia 2 Bursary Office.
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={handleCopyNotice}
+                className="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                <Copy className="w-3.5 h-3.5 text-slate-500" />
+                <span>{copiedNotice ? 'Copied!' : 'Copy Template'}</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                {noticeModal.student && noticeChannel === 'sms' && (
+                  <a
+                    href={`sms:${noticeModal.student.parentPhone}?body=${encodeURIComponent(noticeMessageText)}`}
+                    className="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Open SMS App</span>
+                  </a>
+                )}
+
+                {noticeModal.student && noticeChannel === 'email' && (
+                  <a
+                    href={`mailto:guardian@giversworldmission.edu.sl?subject=${encodeURIComponent(`Tuition Fee Notice - ${noticeModal.student.name}`)}&body=${encodeURIComponent(noticeMessageText)}`}
+                    className="py-2 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Open Email Client</span>
+                  </a>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleDispatchNotice}
+                  className="py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{noticeModal.isBulk ? 'Dispatch Batch Reminders' : 'Dispatch Notification'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FLOATING SUCCESS NOTIFICATION TOAST */}
+      {noticeToast && (
+        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border border-slate-800 flex items-center gap-3 animate-fadeIn">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0"></div>
+          <p className="text-xs font-semibold">{noticeToast}</p>
+          <button
+            type="button"
+            onClick={() => setNoticeToast(null)}
+            className="p-1 text-slate-400 hover:text-white rounded-lg cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

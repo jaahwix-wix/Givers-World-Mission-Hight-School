@@ -9,16 +9,19 @@ import {
   Users, 
   Award, 
   CreditCard, 
-  Database,
-  Menu,
-  X,
-  FileText,
-  GraduationCap,
-  Bus,
-  Briefcase,
-  BookOpen,
-  Sun,
-  Moon
+  Database, 
+  Menu, 
+  X, 
+  FileText, 
+  GraduationCap, 
+  Bus, 
+  Briefcase, 
+  BookOpen, 
+  Sun, 
+  Moon,
+  Shield,
+  Lock,
+  Key
 } from 'lucide-react';
 import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger, FeeTransaction } from './types';
 import { 
@@ -41,6 +44,9 @@ import BusManagement from './components/BusManagement';
 import StaffManagement from './components/StaffManagement';
 import Library from './components/Library';
 import GlobalHeader from './components/GlobalHeader';
+import PrivilegesModal from './components/PrivilegesModal';
+import AccessRestricted from './components/AccessRestricted';
+import { useAuth } from './context/AuthContext';
 import { AnimatePresence } from 'motion/react';
 
 import schoolLogo from './assets/logo.jpg';
@@ -88,6 +94,9 @@ export function getPendingFeeStudents(
 }
 
 export default function App() {
+  const { user, role, privileges, can, isFirebaseOnline } = useAuth();
+  const [isPrivilegesModalOpen, setIsPrivilegesModalOpen] = useState(false);
+
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const cached = localStorage.getItem('sma_theme');
@@ -115,6 +124,31 @@ export default function App() {
   const [records, setRecords] = useState<StudentAcademicRecord[]>([]);
   const [examPreps, setExamPreps] = useState<NationalExamPrep[]>([]);
   const [fees, setFees] = useState<StudentFeeLedger[]>([]);
+
+  // Navigation Links definition with RBAC permissions
+  const NAV_LINKS = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'canViewDashboard' as const, moduleName: 'Executive Dashboard', requiredDesc: 'Dashboard & KPI viewing permission' },
+    { id: 'students', label: 'Student Files', icon: Users, permission: 'canViewStudents' as const, moduleName: 'Student Records', requiredDesc: 'Student registry access' },
+    { id: 'performance', label: 'Academic Portal', icon: Award, permission: 'canViewAcademics' as const, moduleName: 'Academic Portal', requiredDesc: 'Academic grading & terminal performance access' },
+    { id: 'fees', label: 'Tuition Accounts', icon: CreditCard, permission: 'canViewFinances' as const, moduleName: 'Tuition & Financial Accounts', requiredDesc: 'School Bursary and financial ledgers access' },
+    { id: 'staff-management', label: 'Staff Management', icon: Briefcase, permission: 'canManageStaff' as const, moduleName: 'Staff & Personnel Management', requiredDesc: 'Staff administration and payroll authority' },
+    { id: 'library', label: 'School Library', icon: BookOpen, permission: 'canManageLibrary' as const, moduleName: 'School Library Catalog', requiredDesc: 'Library resources and lending privileges' },
+    { id: 'student-portal', label: 'Student Portal', icon: GraduationCap, permission: 'canViewStudentPortal' as const, moduleName: 'Student & Guardian Portal', requiredDesc: 'Student / Guardian personal viewer privilege' },
+    { id: 'bus-service', label: 'School Bus', icon: Bus, permission: 'canManageBus' as const, moduleName: 'School Bus Fleet & Logistics', requiredDesc: 'Transportation logistics management' },
+    { id: 'backup', label: 'Data Center', icon: Database, permission: 'canBackupData' as const, moduleName: 'System Administration & Backup', requiredDesc: 'Super Administrator system data privileges' }
+  ];
+
+  // Auto redirect if current tab is forbidden when switching role
+  useEffect(() => {
+    const currentLink = NAV_LINKS.find(n => n.id === activeTab);
+    if (currentLink && !can(currentLink.permission)) {
+      if (can('canViewDashboard')) setActiveTab('dashboard');
+      else if (can('canViewStudentPortal')) setActiveTab('student-portal');
+      else if (can('canViewAcademics')) setActiveTab('performance');
+      else if (can('canViewFinances')) setActiveTab('fees');
+      else if (can('canManageBus')) setActiveTab('bus-service');
+    }
+  }, [role]);
 
   // 1. Initial Load: Sync with LocalStorage or set mocks
   useEffect(() => {
@@ -327,24 +361,25 @@ export default function App() {
     setIsMobileMenuOpen(false);
   };
 
-  // Navigation Links definition
-  const NAV_LINKS = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'students', label: 'Student Files', icon: Users },
-    { id: 'performance', label: 'Academic Portal', icon: Award },
-    { id: 'fees', label: 'Tuition Accounts', icon: CreditCard },
-    { id: 'staff-management', label: 'Staff Management', icon: Briefcase },
-    { id: 'library', label: 'School Library', icon: BookOpen },
-    { id: 'student-portal', label: 'Student Portal', icon: GraduationCap },
-    { id: 'bus-service', label: 'School Bus', icon: Bus },
-    { id: 'backup', label: 'Data Center', icon: Database }
-  ];
+  // Find active tab metadata for RBAC checks
+  const activeLinkMeta = NAV_LINKS.find(link => link.id === activeTab);
+  const isReportCardRestricted = activeTab === 'report-card' && !can('canGenerateReportCards') && !can('canViewAcademics');
+  const isCurrentTabRestricted = (activeLinkMeta && !can(activeLinkMeta.permission)) || isReportCardRestricted;
+
+  const handleNavigateHome = () => {
+    if (can('canViewDashboard')) setActiveTab('dashboard');
+    else if (can('canViewStudentPortal')) setActiveTab('student-portal');
+    else if (can('canViewAcademics')) setActiveTab('performance');
+    else if (can('canViewFinances')) setActiveTab('fees');
+    else if (can('canManageBus')) setActiveTab('bus-service');
+    else setActiveTab('dashboard');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row font-sans text-slate-800 dark:text-slate-100 transition-colors duration-200" id="main-app-container">
       
       {/* 1. Sidebar Navigation (Desktop) - Hidden when printing report cards */}
-      <aside className="w-64 bg-slate-900 text-white flex-col shrink-0 border-r border-slate-800 hidden md:flex print:hidden" id="desktop-sidebar">
+      <aside className="w-68 bg-slate-900 text-white flex flex-col shrink-0 border-r border-slate-800 hidden md:flex print:hidden" id="desktop-sidebar">
         {/* Sidebar Header with SL Flag */}
         <div className="p-5 border-b border-slate-800 relative">
           <div className="flex h-1 w-full overflow-hidden rounded-full absolute top-0 left-0">
@@ -376,31 +411,86 @@ export default function App() {
         </div>
 
         {/* Sidebar Navigation Links */}
-        <nav className="flex-1 p-4 space-y-1.5" id="desktop-nav-panel">
+        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto" id="desktop-nav-panel">
           {NAV_LINKS.map(link => {
             const Icon = link.icon;
             const isTabActive = activeTab === link.id || (link.id === 'performance' && activeTab === 'report-card');
+            const hasAccess = can(link.permission);
+
             return (
               <button
                 key={link.id}
                 onClick={() => handleNavigate(link.id)}
-                className={`w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-semibold tracking-wide transition-all cursor-pointer ${
                   isTabActive 
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/40' 
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    : hasAccess
+                      ? 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      : 'text-slate-500 hover:bg-slate-800/60 hover:text-slate-300 opacity-75'
                 }`}
               >
-                <Icon className="w-4 h-4 shrink-0" />
-                {link.label}
+                <div className="flex items-center gap-3">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{link.label}</span>
+                </div>
+                {!hasAccess && (
+                  <span title="Restricted by role privilege">
+                    <Lock className="w-3.5 h-3.5 text-slate-500" />
+                  </span>
+                )}
               </button>
             );
           })}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-slate-800 text-[10px] text-slate-500 font-medium">
-          <p>© 2026 {SCHOOL_INFO.name}</p>
-          <p className="mt-0.5">Free Quality Education Standard</p>
+        {/* Sidebar Footer: Authenticated User & Role Profile Card */}
+        <div className="p-3.5 border-t border-slate-800 bg-slate-950/50">
+          <div className="p-2.5 rounded-xl bg-slate-800/80 border border-slate-700/70 space-y-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-extrabold flex items-center justify-center text-xs overflow-hidden shrink-0 shadow-xs">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{user?.displayName?.charAt(0).toUpperCase() || 'A'}</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-white truncate block">
+                    {user?.displayName || 'Administrator'}
+                  </span>
+                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded leading-none ${
+                    role === 'admin' ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' :
+                    role === 'teacher' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                    role === 'bursar' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                    role === 'transport' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                    'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                  }`}>
+                    {role.toUpperCase()}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 truncate block mt-0.5">
+                  {user?.email || 'Authenticated User'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsPrivilegesModalOpen(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold transition-all cursor-pointer shadow-2xs"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Privileges & Role Switcher</span>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between mt-2.5 px-1 text-[10px] text-slate-500 font-medium">
+            <span className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${isFirebaseOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+              <span>{isFirebaseOnline ? 'Cloud Rules Active' : 'Local RBAC Mode'}</span>
+            </span>
+            <span>v2.4 Pro</span>
+          </div>
         </div>
       </aside>
 
@@ -416,7 +506,14 @@ export default function App() {
           <h2 className="font-bold text-xs uppercase">{SCHOOL_INFO.systemName}</h2>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsPrivilegesModalOpen(true)}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-400 hover:text-white transition-all cursor-pointer border border-slate-700 flex items-center justify-center"
+            title="Open Privileges"
+          >
+            <Shield className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer border border-slate-700 flex items-center justify-center"
@@ -437,38 +534,58 @@ export default function App() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-40 md:hidden flex justify-end" id="mobile-drawer">
-            <div className="w-64 bg-slate-900 text-white h-full p-5 flex flex-col space-y-6">
+            <div className="w-72 bg-slate-900 text-white h-full p-5 flex flex-col space-y-4">
               <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                <span className="font-bold text-xs tracking-wider text-indigo-400">NS RECORDER</span>
+                <div>
+                  <span className="font-bold text-xs tracking-wider text-indigo-400 block">SECURITY CONSOLE</span>
+                  <span className="text-[10px] text-slate-400">Role: <strong className="text-white uppercase">{role}</strong></span>
+                </div>
                 <button onClick={() => setIsMobileMenuOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <nav className="flex-1 space-y-2">
+              <nav className="flex-1 space-y-1.5 overflow-y-auto">
                 {NAV_LINKS.map(link => {
                   const Icon = link.icon;
                   const isTabActive = activeTab === link.id;
+                  const hasAccess = can(link.permission);
                   return (
                     <button
                       key={link.id}
                       onClick={() => handleNavigate(link.id)}
-                      className={`w-full flex items-center gap-3 py-3 px-4 rounded-xl text-xs font-semibold tracking-wider transition-all cursor-pointer ${
+                      className={`w-full flex items-center justify-between py-2.5 px-3.5 rounded-xl text-xs font-semibold tracking-wider transition-all cursor-pointer ${
                         isTabActive 
                           ? 'bg-indigo-600 text-white shadow-md shadow-indigo-950/20' 
-                          : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                          : hasAccess
+                            ? 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                            : 'text-slate-500 opacity-75'
                       }`}
                     >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {link.label}
+                      <div className="flex items-center gap-3">
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span>{link.label}</span>
+                      </div>
+                      {!hasAccess && <Lock className="w-3.5 h-3.5 text-slate-500" />}
                     </button>
                   );
                 })}
               </nav>
 
-              <div className="text-[10px] text-slate-500 border-t border-slate-800 pt-4">
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  setIsPrivilegesModalOpen(true);
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Privileges & Switcher</span>
+              </button>
+
+              <div className="text-[10px] text-slate-500 border-t border-slate-800 pt-3">
                 <p>{SCHOOL_INFO.name}</p>
-                <p className="text-indigo-500 font-bold mt-1">Free Quality School Education</p>
+                <p className="text-indigo-500 font-bold mt-0.5">Role-Based Access Control</p>
               </div>
             </div>
           </div>
@@ -483,100 +600,119 @@ export default function App() {
           fees={fees}
           activeTab={activeTab}
           onNavigate={handleNavigate}
+          onOpenPrivileges={() => setIsPrivilegesModalOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8" id="workspace-viewport">
-          {activeTab === 'dashboard' && (
-            <Dashboard 
-              students={students} 
-              records={records} 
-              examPreps={examPreps} 
-              fees={fees} 
-              onNavigate={handleNavigate}
+          {/* RBAC Access Guard Check */}
+          {isCurrentTabRestricted ? (
+            <AccessRestricted 
+              moduleName={activeLinkMeta?.moduleName || 'Restricted Area'}
+              requiredPrivilege={activeLinkMeta?.requiredDesc || 'Role-specific privilege required'}
+              onNavigateHome={handleNavigateHome}
+              onOpenPrivileges={() => setIsPrivilegesModalOpen(true)}
             />
-          )}
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
+                <Dashboard 
+                  students={students} 
+                  records={records} 
+                  examPreps={examPreps} 
+                  fees={fees} 
+                  onNavigate={handleNavigate}
+                />
+              )}
 
-          {activeTab === 'students' && (
-            <StudentList 
-              students={students} 
-              onAddStudent={handleAddStudent}
-              onUpdateStudent={handleUpdateStudent}
-              onDeleteStudent={handleDeleteStudent}
-              onNavigate={handleNavigate}
-              initialSearch={navigationArgs?.search}
-              initialSelectedStudentId={navigationArgs?.studentId}
-            />
-          )}
+              {activeTab === 'students' && (
+                <StudentList 
+                  students={students} 
+                  onAddStudent={handleAddStudent}
+                  onUpdateStudent={handleUpdateStudent}
+                  onDeleteStudent={handleDeleteStudent}
+                  onNavigate={handleNavigate}
+                  initialSearch={navigationArgs?.search}
+                  initialSelectedStudentId={navigationArgs?.studentId}
+                />
+              )}
 
-          {activeTab === 'performance' && (
-            <AcademicPortal 
-              students={students} 
-              records={records} 
-              examPreps={examPreps} 
-              onUpdateRecord={handleUpdateRecord}
-              onUpdateExamPrep={handleUpdateExamPrep}
-              initialSelectedStudentId={navigationArgs?.studentId}
-              initialTab={navigationArgs?.tab}
-            />
-          )}
+              {activeTab === 'performance' && (
+                <AcademicPortal 
+                  students={students} 
+                  records={records} 
+                  examPreps={examPreps} 
+                  onUpdateRecord={handleUpdateRecord}
+                  onUpdateExamPrep={handleUpdateExamPrep}
+                  initialSelectedStudentId={navigationArgs?.studentId}
+                  initialTab={navigationArgs?.tab}
+                />
+              )}
 
-          {activeTab === 'report-card' && (
-            <ReportCardView 
-              students={students} 
-              records={records} 
-              onNavigateBack={() => handleNavigate('students')}
-              initialStudentId={navigationArgs?.studentId}
-            />
-          )}
+              {activeTab === 'report-card' && (
+                <ReportCardView 
+                  students={students} 
+                  records={records} 
+                  onNavigateBack={() => handleNavigate('students')}
+                  initialStudentId={navigationArgs?.studentId}
+                />
+              )}
 
-          {activeTab === 'fees' && (
-            <Financials 
-              students={students} 
-              fees={fees} 
-              onAddTransaction={handleAddTransaction}
-              initialStudentId={navigationArgs?.studentId}
-              initialTerm={navigationArgs?.term}
-            />
-          )}
+              {activeTab === 'fees' && (
+                <Financials 
+                  students={students} 
+                  fees={fees} 
+                  onAddTransaction={handleAddTransaction}
+                  initialStudentId={navigationArgs?.studentId}
+                  initialTerm={navigationArgs?.term}
+                />
+              )}
 
-          {activeTab === 'staff-management' && (
-            <StaffManagement 
-              students={students} 
-            />
-          )}
+              {activeTab === 'staff-management' && (
+                <StaffManagement 
+                  students={students} 
+                />
+              )}
 
-          {activeTab === 'library' && (
-            <Library 
-              students={students} 
-            />
-          )}
+              {activeTab === 'library' && (
+                <Library 
+                  students={students} 
+                />
+              )}
 
-          {activeTab === 'student-portal' && (
-            <StudentPortal 
-              students={students} 
-              records={records} 
-              fees={fees} 
-            />
-          )}
+              {activeTab === 'student-portal' && (
+                <StudentPortal 
+                  students={students} 
+                  records={records} 
+                  fees={fees} 
+                />
+              )}
 
-          {activeTab === 'bus-service' && (
-            <BusManagement 
-              students={students} 
-            />
-          )}
+              {activeTab === 'bus-service' && (
+                <BusManagement 
+                  students={students} 
+                />
+              )}
 
-          {activeTab === 'backup' && (
-            <DataBackup 
-              students={students} 
-              records={records} 
-              examPreps={examPreps} 
-              fees={fees} 
-              onRestoreData={handleRestoreData}
-              onResetData={handleResetData}
-            />
+              {activeTab === 'backup' && (
+                <DataBackup 
+                  students={students} 
+                  records={records} 
+                  examPreps={examPreps} 
+                  fees={fees} 
+                  onRestoreData={handleRestoreData}
+                  onResetData={handleResetData}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
+
+      {/* Privileges & Authentication Modal */}
+      <PrivilegesModal 
+        isOpen={isPrivilegesModalOpen}
+        onClose={() => setIsPrivilegesModalOpen(false)}
+      />
 
     </div>
   );

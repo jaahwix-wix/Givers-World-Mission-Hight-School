@@ -11,21 +11,26 @@ import {
   CreditCard, 
   FileText, 
   Award, 
-  ChevronRight,
-  Sparkles,
-  ArrowRight
+  ChevronRight, 
+  Sparkles, 
+  ArrowRight,
+  Shield,
+  Key
 } from 'lucide-react';
 import { Student, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
+import { useAuth } from '../context/AuthContext';
 
 interface GlobalHeaderProps {
   students: Student[];
   fees: StudentFeeLedger[];
   activeTab: string;
   onNavigate: (tab: string, arg?: any) => void;
+  onOpenPrivileges: () => void;
 }
 
-export default function GlobalHeader({ students, fees, activeTab, onNavigate }: GlobalHeaderProps) {
+export default function GlobalHeader({ students, fees, activeTab, onNavigate, onOpenPrivileges }: GlobalHeaderProps) {
+  const { user, role, privileges, isFirebaseOnline } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -257,11 +262,49 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate }: 
       </div>
 
       {/* Header Right Status Bar */}
-      <div className="hidden lg:flex items-center gap-3 shrink-0">
-        <div className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-2">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>Academic Year: 2025/2026</span>
         </div>
+
+        {/* Role & Privileges Trigger */}
+        <button
+          type="button"
+          onClick={onOpenPrivileges}
+          className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs hover:shadow-xs transition-all cursor-pointer group"
+          title="Open Authentication & Privileges Management"
+        >
+          <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs overflow-hidden shrink-0">
+            {user?.photoURL ? (
+              <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
+            ) : (
+              <span>{user?.displayName?.charAt(0).toUpperCase() || 'A'}</span>
+            )}
+          </div>
+          
+          <div className="text-left hidden sm:block">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-slate-900 dark:text-white leading-none text-xs">
+                {user?.displayName ? user.displayName.split(' ')[0] : 'Admin'}
+              </span>
+              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md leading-none ${
+                role === 'admin' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300' :
+                role === 'teacher' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300' :
+                role === 'bursar' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300' :
+                role === 'transport' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300' :
+                'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'
+              }`}>
+                {role.toUpperCase()}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400 block leading-tight mt-0.5 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+              Manage Privileges
+            </span>
+          </div>
+
+          <Shield className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors shrink-0" />
+        </button>
       </div>
     </header>
   );

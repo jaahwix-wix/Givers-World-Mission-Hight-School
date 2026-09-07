@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with role-based access privileges for school management",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Full name of the user" },
+        "role": { 
+          "type": "string", 
+          "description": "System role determining permissions and privileges",
+          "enum": ["admin", "teacher", "bursar", "transport", "student_parent"]
+        },
+        "photoURL": { "type": "string", "description": "Profile picture URL" },
+        "createdAt": { "type": "string", "description": "Creation ISO timestamp" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "RolePrivilege": {
+      "title": "RolePrivilege",
+      "description": "Privileges configuration assigned to user or role",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "description": "Target role name" },
+        "canManageStudents": { "type": "string", "description": "Can create/edit/delete students" },
+        "canManageGrades": { "type": "string", "description": "Can record and edit academic grades" },
+        "canManageFinances": { "type": "string", "description": "Can record payments and view ledgers" },
+        "canManageStaff": { "type": "string", "description": "Can manage staff profiles and salaries" },
+        "canManageTransport": { "type": "string", "description": "Can update bus routes and fleet" },
+        "canBackupData": { "type": "string", "description": "Can export and backup system data" }
+      },
+      "required": ["role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Stores user account information, profile details, and role assignments"
+    },
+    "/admins/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of designated system administrators"
+    }
+  }
+}
