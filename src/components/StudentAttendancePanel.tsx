@@ -50,37 +50,23 @@ export default function StudentAttendancePanel({ students }: StudentAttendancePa
 
   // Load attendance logs
   useEffect(() => {
-    const cachedRecords = localStorage.getItem('sma_daily_attendance');
-    if (cachedRecords) {
-      setAttendanceRecords(JSON.parse(cachedRecords));
-    } else {
-      // Seed some realistic mock attendance records for previous days in July 2026 to populate the visualization
-      const mockRecords: AttendanceRecord[] = [];
-      const activeStuds = students.filter(s => s.status === 'Active');
-      
-      // Seed 5 days of attendance for each active student
-      const datesToSeed = ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'];
-      
-      activeStuds.forEach(student => {
-        datesToSeed.forEach((dt, idx) => {
-          // Mostly present, some late, rare absent
-          let status: AttendanceRecord['status'] = 'Present';
-          const rand = (student.name.charCodeAt(0) + idx) % 10;
-          if (rand === 0) status = 'Absent';
-          else if (rand === 1) status = 'Late';
-          
-          mockRecords.push({
-            id: `${student.id}-${dt}`,
-            studentId: student.id,
-            date: dt,
-            status
-          });
-        });
-      });
+    const loadAttendanceData = () => {
+      const cachedRecords = localStorage.getItem('sma_daily_attendance');
+      if (cachedRecords) {
+        setAttendanceRecords(JSON.parse(cachedRecords));
+      } else {
+        setAttendanceRecords([]);
+        localStorage.setItem('sma_daily_attendance', JSON.stringify([]));
+      }
+    };
 
-      setAttendanceRecords(mockRecords);
-      localStorage.setItem('sma_daily_attendance', JSON.stringify(mockRecords));
-    }
+    loadAttendanceData();
+    window.addEventListener('sma_database_wiped', loadAttendanceData);
+    window.addEventListener('storage', loadAttendanceData);
+    return () => {
+      window.removeEventListener('sma_database_wiped', loadAttendanceData);
+      window.removeEventListener('storage', loadAttendanceData);
+    };
   }, [students]);
 
   // Current date logging sheet state (holds temporary status changes before saving)

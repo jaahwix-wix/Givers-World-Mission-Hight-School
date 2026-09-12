@@ -30,7 +30,10 @@ import {
   X,
   Clock,
   Sparkles,
-  ShieldAlert
+  ShieldAlert,
+  Building2,
+  ShieldCheck,
+  PhoneCall
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -163,7 +166,14 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
   const [noticeChannel, setNoticeChannel] = useState<'sms' | 'email'>('sms');
   const [noticeMessageText, setNoticeMessageText] = useState('');
   const [copiedNotice, setCopiedNotice] = useState(false);
+  const [copiedLeadershipPhone, setCopiedLeadershipPhone] = useState(false);
   const [noticeToast, setNoticeToast] = useState<string | null>(null);
+
+  const handleCopyPhone = (phoneNum: string) => {
+    navigator.clipboard.writeText(phoneNum);
+    setCopiedLeadershipPhone(true);
+    setTimeout(() => setCopiedLeadershipPhone(false), 2000);
+  };
 
   // Helper to generate notification templates
   const generateNoticeContent = (
@@ -174,7 +184,7 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
     term: number
   ) => {
     if (channel === 'sms') {
-      return `GIVERS WORLD MISSION NOTICE: Dear ${student.parentName}, outstanding tuition fees of SLE ${balance.toLocaleString()} for ${student.name} (${student.currentClass}, Term ${term}) remain UNPAID. Kindly settle promptly via Orange Money (031258528) or at the school Bursary in Kambia. Thank you. Evang. Saint Turay, Principal.`;
+      return `GIVERS WORLD MISSION NOTICE: Dear ${student.parentName}, outstanding tuition fees of SLE ${balance.toLocaleString()} for ${student.name} (${student.currentClass}, Term ${term}) remain UNPAID. Kindly settle promptly via Orange Money (${SCHOOL_INFO.phone}) or at the school Bursary in Kambia. Thank you. Evangelist Saint Turay, CEO/Principal.`;
     } else {
       return `Subject: Urgent: Tuition Fee Overdue Notice - ${student.name} (Term ${term})
 
@@ -192,15 +202,15 @@ We wish to inform you that tuition fees for your child/ward remain unpaid for th
 • Outstanding Overdue Balance: SLE ${balance.toLocaleString()}
 
 PAYMENT OPTIONS:
-1. Orange Money / Africell Money: 031258528 (Reference: ${student.admissionNumber})
+1. Orange Money / Africell Money: ${SCHOOL_INFO.phone} (Reference: ${student.admissionNumber})
 2. Zenith Bank SL / Rokel Commercial Bank (School Account)
 3. School Bursary Office (Mon-Fri 8:00 AM - 4:00 PM)
 
-Please disregard this notice if payment has been made in the last 24 hours. For verification, contact our accounts office at ${SCHOOL_INFO.phone}.
+Please disregard this notice if payment has been made in the last 24 hours. For verification, contact our administration office at ${SCHOOL_INFO.phone}.
 
 Yours faithfully,
 Evangelist Saint Turay
-Principal & Co-Founder, Givers World Mission`;
+CEO/Principal, Givers World Mission`;
     }
   };
 
@@ -236,7 +246,7 @@ Principal & Co-Founder, Givers World Mission`;
       isBulk: true
     });
     setNoticeMessageText(
-      `GIVERS WORLD MISSION BATCH NOTICE: Dear Guardian, tuition fees for Term ${pendingTermFilter} are overdue. Kindly settle outstanding balance via Orange Money (031258528) or at the school Bursary before examinations commence. Thank you.`
+      `GIVERS WORLD MISSION BATCH NOTICE: Dear Guardian, tuition fees for Term ${pendingTermFilter} are overdue. Kindly settle outstanding balance via Orange Money (${SCHOOL_INFO.phone}) or at the school Bursary before examinations commence. Thank you. Evangelist Saint Turay, CEO/Principal.`
     );
   };
 
@@ -461,10 +471,191 @@ Principal & Co-Founder, Givers World Mission`;
               Welcome to the academic control panel. Managing student profiles, Continuous Assessment (CA) scores, term positions, school fees, and national exams (NPSE, BECE, WASSCE).
             </p>
             <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-400 border-t border-slate-800 pt-3">
-              <div><span className="text-slate-200 font-semibold">Principal & Co-Founder:</span> {SCHOOL_INFO.principalName}</div>
-              <div><span className="text-slate-200 font-semibold">Address:</span> {SCHOOL_INFO.address}</div>
-              <div><span className="text-slate-200 font-semibold">Portal Website:</span> <a href={SCHOOL_INFO.website} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:underline">{SCHOOL_INFO.website}</a></div>
-              <div><span className="text-slate-200 font-semibold">Year:</span> 2025/2026 Academic Cycle</div>
+              <div><span className="text-slate-200 font-semibold">CEO/Principal:</span> Evangelist Saint Turay</div>
+              <div><span className="text-slate-200 font-semibold">Telephone:</span> 034 055410</div>
+              <div><span className="text-slate-200 font-semibold">Campus:</span> Kambia 2, Northern Province</div>
+              <div><span className="text-slate-200 font-semibold">Academic Cycle:</span> 2025/2026</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* School Leadership & Governance Section */}
+      <div 
+        className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm space-y-4" 
+        id="school-leadership-section"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-2xs">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-slate-900 text-base">School Leadership & Administration</h3>
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Official Governance
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Executive direction, co-founding directorate, and official ministerial contacts
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-xs font-semibold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+              Kambia 2 Campus • MBSSE Reg.
+            </span>
+          </div>
+        </div>
+
+        {/* Leadership Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Card 1: CEO & Principal Primary Executive Card */}
+          <div className="p-4 rounded-xl border-2 border-indigo-200/90 bg-gradient-to-br from-indigo-50/70 via-white to-indigo-50/30 flex flex-col justify-between space-y-3 relative overflow-hidden shadow-2xs">
+            <div className="absolute top-0 right-0 transform translate-x-3 -translate-y-3 w-16 h-16 bg-indigo-500/10 rounded-full blur-sm pointer-events-none"></div>
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-indigo-600 text-white shadow-xs">
+                  Executive Head
+                </span>
+                <span className="text-[11px] font-bold text-indigo-700">Co-Founder</span>
+              </div>
+              
+              <div className="flex items-start gap-3 mt-1">
+                <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white font-black text-lg flex items-center justify-center shrink-0 shadow-sm border border-indigo-400">
+                  EST
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Executive Head</div>
+                  <h4 className="text-base font-black text-slate-900 leading-tight">
+                    CEO/Principal: Evangelist Saint Turay
+                  </h4>
+                  <p className="text-xs font-semibold text-indigo-700 mt-0.5">
+                    Givers World Mission Management
+                  </p>
+                </div>
+              </div>
+
+              {/* Explicit Telephone Row */}
+              <div className="mt-3.5 p-2.5 bg-white rounded-lg border border-indigo-100 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-1.5 rounded-md bg-emerald-50 text-emerald-700">
+                    <Phone className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[9px] font-bold uppercase text-slate-400 block leading-none">Telephone Contact</span>
+                    <span className="font-mono text-xs font-black text-slate-900 truncate block mt-0.5">
+                      Telephone: 034 055410
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyPhone('034 055410')}
+                  className="px-2 py-1 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-[10px] font-bold rounded border border-slate-200 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
+                  title="Copy telephone number"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>{copiedLeadershipPhone ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-2 pt-2 border-t border-indigo-100/80">
+              <a
+                href="tel:034055410"
+                className="flex-1 py-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+              >
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>Call 034 055410</span>
+              </a>
+              <a
+                href="sms:034055410"
+                className="py-1.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
+                <span>SMS</span>
+              </a>
+            </div>
+          </div>
+
+          {/* Card 2: Academic Secretariat & Administration */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                  Academic Secretariat
+                </span>
+                <span className="text-[11px] font-semibold text-slate-500">MBSSE Certified</span>
+              </div>
+
+              <div className="space-y-2.5 mt-1 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Vice Principal</span>
+                  <p className="font-bold text-slate-800 mt-0.5">{SCHOOL_INFO.vicePrincipalName}</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Office of the Bursar & Registrar</span>
+                  <p className="font-semibold text-slate-700 mt-0.5">Continuous Assessment, Fees Reconciliation & WAEC Registry</p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Campus Administration Line</span>
+                  <p className="font-mono text-xs font-bold text-slate-800 mt-0.5">
+                    Telephone: 034 055410
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[11px] text-slate-500">
+              <span>Motto: <em className="font-serif font-bold text-slate-700">"{SCHOOL_INFO.motto}"</em></span>
+              <span className="font-bold text-slate-600">Est. {SCHOOL_INFO.founded}</span>
+            </div>
+          </div>
+
+          {/* Card 3: District Campus & Institutional Compliance */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
+                  Campus Location
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-700">Northern Province</span>
+              </div>
+
+              <div className="space-y-2 mt-1 text-xs">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block">Campus Address</span>
+                  <p className="font-semibold text-slate-800 mt-0.5 leading-relaxed">
+                    {SCHOOL_INFO.address}
+                  </p>
+                </div>
+                <div className="p-2 bg-white rounded-lg border border-slate-200/80 space-y-1">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-500 font-medium">District Directorate:</span>
+                    <span className="font-bold text-slate-800">Kambia District</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-500 font-medium">School Direct Email:</span>
+                    <span className="font-mono text-indigo-700 font-semibold">{SCHOOL_INFO.email}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
+              <span className="text-[10px] text-slate-400 font-medium">Online Web Registry:</span>
+              <a
+                href={SCHOOL_INFO.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+              >
+                <span>Visit Portal</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         </div>
@@ -1249,7 +1440,7 @@ Principal & Co-Founder, Givers World Mission`;
               <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-start gap-2 text-xs text-indigo-900">
                 <Sparkles className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
                 <div className="text-[11px] leading-relaxed">
-                  <span className="font-bold">Sierra Leone Payment Channels:</span> Notice directs guardians to Orange Money (031258528), Africell Money, or the Kambia 2 Bursary Office.
+                  <span className="font-bold">Sierra Leone Payment Channels:</span> Notice directs guardians to Orange Money ({SCHOOL_INFO.phone}), Africell Money, or the Kambia 2 Bursary Office.
                 </div>
               </div>
             </div>

@@ -51,81 +51,9 @@ interface CheckOutRecord {
   status: 'Checked Out' | 'Returned' | 'Overdue';
 }
 
-const DEFAULT_BOOKS: BookItem[] = [
-  {
-    id: 'b-1',
-    title: 'WASSCE Integrated Science Core',
-    author: 'J. S. Koroma & Al.',
-    isbn: '978-9991-04-12',
-    category: 'Science',
-    totalCopies: 15,
-    availableCopies: 13
-  },
-  {
-    id: 'b-2',
-    title: 'A New Geometry for West Africa',
-    author: 'M. O. Campbell',
-    isbn: '978-0195-32-44',
-    category: 'Mathematics',
-    totalCopies: 12,
-    availableCopies: 12
-  },
-  {
-    id: 'b-3',
-    title: 'The Kossoh Town Boy',
-    author: 'Robert Wellesley Cole',
-    isbn: '978-0521-04-22',
-    category: 'Literature',
-    totalCopies: 8,
-    availableCopies: 7
-  },
-  {
-    id: 'b-4',
-    title: 'Senior Secondary Chemistry Book 2',
-    author: 'S. T. Bajah',
-    isbn: '978-1294-88-01',
-    category: 'Chemistry',
-    totalCopies: 10,
-    availableCopies: 9
-  }
-];
+const DEFAULT_BOOKS: BookItem[] = [];
 
-const DEFAULT_CHECKOUTS: CheckOutRecord[] = [
-  {
-    id: 'co-1',
-    bookId: 'b-1',
-    bookTitle: 'WASSCE Integrated Science Core',
-    studentId: 'stud-1',
-    studentName: 'Alpha Koroma',
-    issueDate: '2026-07-01',
-    dueDate: '2026-07-15',
-    fineAmount: 5000,
-    status: 'Overdue'
-  },
-  {
-    id: 'co-2',
-    bookId: 'b-3',
-    bookTitle: 'The Kossoh Town Boy',
-    studentId: 'stud-2',
-    studentName: 'Fatmata Kamara',
-    issueDate: '2026-07-10',
-    dueDate: '2026-07-24',
-    fineAmount: 0,
-    status: 'Checked Out'
-  },
-  {
-    id: 'co-3',
-    bookId: 'b-4',
-    bookTitle: 'Senior Secondary Chemistry Book 2',
-    studentId: 'stud-3',
-    studentName: 'Mohamed Bangura',
-    issueDate: '2026-07-05',
-    dueDate: '2026-07-19',
-    returnDate: '2026-07-18',
-    fineAmount: 0,
-    status: 'Returned'
-  }
-];
+const DEFAULT_CHECKOUTS: CheckOutRecord[] = [];
 
 export default function Library({ students }: LibraryProps) {
   const [books, setBooks] = useState<BookItem[]>([]);
@@ -156,22 +84,32 @@ export default function Library({ students }: LibraryProps) {
   const [checkoutDueDate, setCheckoutDueDate] = useState('');
 
   useEffect(() => {
-    const cachedBooks = localStorage.getItem('sma_library_books');
-    const cachedCheckouts = localStorage.getItem('sma_library_checkouts');
+    const loadLibraryData = () => {
+      const cachedBooks = localStorage.getItem('sma_library_books');
+      const cachedCheckouts = localStorage.getItem('sma_library_checkouts');
 
-    if (cachedBooks) {
-      setBooks(JSON.parse(cachedBooks));
-    } else {
-      setBooks(DEFAULT_BOOKS);
-      localStorage.setItem('sma_library_books', JSON.stringify(DEFAULT_BOOKS));
-    }
+      if (cachedBooks) {
+        setBooks(JSON.parse(cachedBooks));
+      } else {
+        setBooks(DEFAULT_BOOKS);
+        localStorage.setItem('sma_library_books', JSON.stringify(DEFAULT_BOOKS));
+      }
 
-    if (cachedCheckouts) {
-      setCheckouts(JSON.parse(cachedCheckouts));
-    } else {
-      setCheckouts(DEFAULT_CHECKOUTS);
-      localStorage.setItem('sma_library_checkouts', JSON.stringify(DEFAULT_CHECKOUTS));
-    }
+      if (cachedCheckouts) {
+        setCheckouts(JSON.parse(cachedCheckouts));
+      } else {
+        setCheckouts(DEFAULT_CHECKOUTS);
+        localStorage.setItem('sma_library_checkouts', JSON.stringify(DEFAULT_CHECKOUTS));
+      }
+    };
+
+    loadLibraryData();
+    window.addEventListener('sma_database_wiped', loadLibraryData);
+    window.addEventListener('storage', loadLibraryData);
+    return () => {
+      window.removeEventListener('sma_database_wiped', loadLibraryData);
+      window.removeEventListener('storage', loadLibraryData);
+    };
   }, []);
 
   // Sync / Calculate Overdue statuses & fines daily

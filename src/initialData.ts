@@ -13,19 +13,19 @@ export const SCHOOL_INFO = {
   systemName: 'Givers World Mission Management System',
   motto: 'Veritas Omnia Vincit',
   address: 'Kambia 2, Northern Province, Kambia, Sierra Leone',
-  phone: '031258528',
+  phone: '034 055410',
   email: 'info@giversworldmission.edu.sl',
   website: 'https://givers-world-mission-high-school.vercel.app/',
   logo: schoolLogo,
   founded: 1998,
   principalName: 'Evangelist Saint Turay',
-  principalTitle: 'Principal & Co-Founder',
+  principalTitle: 'CEO/Principal',
   coFounder: 'Evangelist Saint Turay',
   principalSignature: 'Evang. Saint Turay',
   vicePrincipalName: 'Mrs. Fatmata Sesay',
 };
 
-export const INITIAL_STUDENTS: Student[] = [
+export const DEMO_SAMPLE_STUDENTS: Student[] = [
   {
     id: 'stud-001',
     name: 'Mustapha Koroma',
@@ -226,8 +226,8 @@ function generateMockGrades(studentId: string, className: StudentClass, stream?:
   });
 }
 
-// Generate Academic Records
-export const INITIAL_ACADEMIC_RECORDS: StudentAcademicRecord[] = INITIAL_STUDENTS.map((student, sIdx) => {
+// Generate Sample Academic Records
+export const DEMO_SAMPLE_ACADEMIC_RECORDS: StudentAcademicRecord[] = DEMO_SAMPLE_STUDENTS.map((student, sIdx) => {
   // Give different grade factors for realistic spread
   let factor = 1.0;
   if (sIdx === 0) factor = 1.05; // Excellent
@@ -294,8 +294,8 @@ export const INITIAL_ACADEMIC_RECORDS: StudentAcademicRecord[] = INITIAL_STUDENT
   };
 });
 
-// National Examinations Prep Tracker for Milestone Classes
-export const INITIAL_NATIONAL_EXAMS: NationalExamPrep[] = [
+// Sample National Examinations Prep Tracker for Milestone Classes
+export const DEMO_SAMPLE_NATIONAL_EXAMS: NationalExamPrep[] = [
   {
     studentId: 'stud-001', // Class 6 (NPSE)
     examType: 'NPSE',
@@ -396,8 +396,8 @@ export const INITIAL_NATIONAL_EXAMS: NationalExamPrep[] = [
   }
 ];
 
-// Fee Ledgers for students
-export const INITIAL_FEE_LEDGERS: StudentFeeLedger[] = INITIAL_STUDENTS.map((student, idx) => {
+// Sample Fee Ledgers for students
+export const DEMO_SAMPLE_FEE_LEDGERS: StudentFeeLedger[] = DEMO_SAMPLE_STUDENTS.map((student, idx) => {
   // Prep & Primary: SLL 2,500 per term
   // JSS: SLL 3,500 per term
   // SSS: SLL 4,500 per term
@@ -493,3 +493,15 @@ export const INITIAL_FEE_LEDGERS: StudentFeeLedger[] = INITIAL_STUDENTS.map((stu
     }
   };
 });
+
+/**
+ * LIVE PRODUCTION DATABASE SCHEMAS
+ * In production mode, all registries start completely clean and unseeded.
+ * Real students, academic records, national exams, and fees are entered
+ * through the school administrative interfaces.
+ */
+export const INITIAL_STUDENTS: Student[] = [];
+export const INITIAL_ACADEMIC_RECORDS: StudentAcademicRecord[] = [];
+export const INITIAL_NATIONAL_EXAMS: NationalExamPrep[] = [];
+export const INITIAL_FEE_LEDGERS: StudentFeeLedger[] = [];
+

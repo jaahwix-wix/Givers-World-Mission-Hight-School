@@ -23,8 +23,14 @@ import {
   AlertCircle,
   ClipboardList,
   UploadCloud,
-  X
+  X,
+  QrCode,
+  Bus,
+  ScanLine,
+  Download,
+  CheckCircle2
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import { Student, StudentAcademicRecord, StudentFeeLedger, StudentClass } from '../types';
 import { SCHOOL_INFO } from '../initialData';
 import { getSubjectsForClass, calculateGrade, getGradingScale } from '../constants';
@@ -42,7 +48,75 @@ export default function StudentPortal({ students, records, fees }: StudentPortal
   const [loggedInStudent, setLoggedInStudent] = useState<Student | null>(null);
   
   // Active Tab inside Portal
-  const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'financials' | 'assignments'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'financials' | 'assignments' | 'attendance_qr'>('overview');
+  
+  // Attendance QR Code & Scanner State
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [scanSuccessMsg, setScanSuccessMsg] = useState<string | null>(null);
+  const [scanLocation, setScanLocation] = useState<'School Bus Route #2 (Kambia)' | 'Classroom 6A Entrance' | 'School Main Gate'>('School Bus Route #2 (Kambia)');
+  const [attendanceScanLogs, setAttendanceScanLogs] = useState<Array<{
+    id: string;
+    timestamp: string;
+    location: string;
+    method: string;
+    status: 'Verified Present';
+  }>>([
+    {
+      id: 'scan-init-1',
+      timestamp: 'Today, 07:42 AM',
+      location: 'School Bus Route #2 (Kambia Central)',
+      method: 'Bus Conductor Handheld Scanner',
+      status: 'Verified Present'
+    },
+    {
+      id: 'scan-init-2',
+      timestamp: 'Today, 08:05 AM',
+      location: 'Main Academic Gate',
+      method: 'Turnstile Optical Scanner',
+      status: 'Verified Present'
+    }
+  ]);
+
+  // Generate QR Code on student login
+  useEffect(() => {
+    if (loggedInStudent) {
+      const payload = JSON.stringify({
+        studentId: loggedInStudent.id,
+        name: loggedInStudent.name,
+        admissionNumber: loggedInStudent.admissionNumber,
+        currentClass: loggedInStudent.currentClass,
+        school: SCHOOL_INFO.name,
+        passType: 'ATTENDANCE_VERIFIED',
+        issuedDate: '2025/2026 Academic Session'
+      });
+
+      QRCode.toDataURL(payload, {
+        width: 320,
+        margin: 1.5,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      })
+        .then(url => setQrCodeUrl(url))
+        .catch(err => console.error('Error generating attendance QR code:', err));
+    }
+  }, [loggedInStudent]);
+
+  const handleSimulateScan = () => {
+    if (!loggedInStudent) return;
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newEntry = {
+      id: `scan-${Date.now()}`,
+      timestamp: `Today, ${now}`,
+      location: scanLocation,
+      method: 'Optical QR Scanner Device',
+      status: 'Verified Present' as const
+    };
+    setAttendanceScanLogs(prev => [newEntry, ...prev]);
+    setScanSuccessMsg(`Attendance Verified! ${loggedInStudent.name} checked in at ${scanLocation}.`);
+    setTimeout(() => setScanSuccessMsg(null), 4000);
+  };
   
   // Assignments and Submissions lists loaded from storage
   const [assignments, setAssignments] = useState<any[]>([]);
@@ -291,6 +365,16 @@ export default function StudentPortal({ students, records, fees }: StudentPortal
         >
           <ClipboardList className="w-4 h-4" /> Home Assignments
         </button>
+        <button
+          onClick={() => setActiveTab('attendance_qr')}
+          className={`flex items-center gap-2 py-3 px-4 font-bold text-sm border-b-2 transition-all cursor-pointer ${
+            activeTab === 'attendance_qr'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <QrCode className="w-4 h-4" /> Attendance QR Pass
+        </button>
       </div>
 
       {/* 3. Portal Tab Render Content */}
@@ -418,6 +502,32 @@ export default function StudentPortal({ students, records, fees }: StudentPortal
               <div className="mt-6 pt-4 border-t border-slate-100 text-[11px] text-indigo-600 bg-indigo-50/50 rounded-xl p-3 text-center font-bold">
                 🔒 Keep your emergency details up-to-date with the School Administration registrar.
               </div>
+            </div>
+
+            {/* Bottom Row: Quick Attendance Pass Banner */}
+            <div className="lg:col-span-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white/10 rounded-2xl border border-white/15 text-indigo-300 shrink-0">
+                  <QrCode className="w-8 h-8" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm md:text-base text-white">Digital Attendance & Bus Scanner QR Pass</h4>
+                    <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Active Pass</span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 max-w-xl">
+                    Unique optical pass for {student.name} ({student.admissionNumber}). Use this QR code for instant check-in when boarding the school bus or entering classrooms.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('attendance_qr')}
+                className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              >
+                <ScanLine className="w-4 h-4" />
+                <span>Open Full QR Attendance Pass</span>
+              </button>
             </div>
           </div>
         )}
@@ -937,6 +1047,216 @@ export default function StudentPortal({ students, records, fees }: StudentPortal
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ATTENDANCE QR CODE PASS TAB */}
+        {activeTab === 'attendance_qr' && (
+          <div className="space-y-6" id="portal-attendance-qr-pane">
+            {/* Scan Feedback Banner */}
+            {scanSuccessMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-800 text-xs font-bold shadow-xs">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{scanSuccessMsg}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Col: The Digital Attendance Pass */}
+              <div className="lg:col-span-6 flex flex-col items-center">
+                <div 
+                  id="student-qr-pass-card"
+                  className="w-full max-w-md bg-white rounded-3xl border-2 border-indigo-200 shadow-xl overflow-hidden relative"
+                >
+                  {/* Sierra Leone National Ribbon */}
+                  <div className="flex h-2 w-full overflow-hidden">
+                    <div className="bg-emerald-500 w-1/3"></div>
+                    <div className="bg-white w-1/3"></div>
+                    <div className="bg-blue-500 w-1/3"></div>
+                  </div>
+
+                  {/* Header */}
+                  <div className="bg-slate-900 text-white p-5 text-center relative">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 mb-1.5">
+                      <Bus className="w-3 h-3" /> Digital Attendance Pass
+                    </div>
+                    <h3 className="font-bold text-base tracking-wide uppercase">{SCHOOL_INFO.name}</h3>
+                    <p className="text-[11px] text-indigo-300 italic">"{SCHOOL_INFO.motto}" • Kambia 2, Sierra Leone</p>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-6 flex flex-col items-center text-center space-y-4">
+                    {/* Student Info */}
+                    <div className="flex items-center gap-3">
+                      {student.profileImage ? (
+                        <img 
+                          src={student.profileImage} 
+                          alt={student.name}
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-100 shadow-sm"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-700 font-black text-2xl flex items-center justify-center border-2 border-indigo-200 shadow-sm">
+                          {student.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="text-left">
+                        <h4 className="text-lg font-black text-slate-900 leading-tight">{student.name}</h4>
+                        <div className="inline-flex items-center gap-2 mt-1">
+                          <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                            {student.admissionNumber}
+                          </span>
+                          <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                            {student.currentClass}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* QR Code Container */}
+                    <div className="p-4 bg-white rounded-2xl border-2 border-slate-900/10 shadow-sm flex flex-col items-center">
+                      {qrCodeUrl ? (
+                        <img 
+                          src={qrCodeUrl} 
+                          alt={`Attendance QR Code for ${student.name}`}
+                          className="w-52 h-52 object-contain"
+                        />
+                      ) : (
+                        <div className="w-52 h-52 flex items-center justify-center text-xs text-slate-400">
+                          Generating QR Pass...
+                        </div>
+                      )}
+                      <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
+                        <ScanLine className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Optical Attendance Token ID: {student.id.slice(0, 8)}</span>
+                      </div>
+                    </div>
+
+                    {/* Metadata Grid */}
+                    <div className="w-full grid grid-cols-2 gap-2 text-left bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Guardian Phone</span>
+                        <span className="font-semibold text-slate-800">{student.parentPhone}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Blood Group</span>
+                        <span className="font-black text-rose-600">{student.bloodType || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    {/* Principal Sign-off */}
+                    <div className="w-full pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-semibold">
+                      <span>CEO/Principal: Evangelist Saint Turay</span>
+                      <span>Telephone: 034 055410</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Actions */}
+                <div className="w-full max-w-md flex gap-2 mt-4">
+                  {qrCodeUrl && (
+                    <a
+                      href={qrCodeUrl}
+                      download={`attendance-qr-${student.admissionNumber}.png`}
+                      className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download QR Image</span>
+                    </a>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Print Pass</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Col: Bus & Classroom Scanner Simulation */}
+              <div className="lg:col-span-6 space-y-5">
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                  <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                    <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100">
+                      <ScanLine className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900">Attendance Scanner Station</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Simulate quick scanner hardware check-in for the school bus and classroom
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Select Scanner Terminal / Station:
+                    </label>
+                    <select
+                      value={scanLocation}
+                      onChange={(e) => setScanLocation(e.target.value as any)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    >
+                      <option value="School Bus Route #2 (Kambia)">🚌 School Bus Route #2 (Kambia Central)</option>
+                      <option value="Classroom 6A Entrance">🏫 Classroom 6A Main Entrance</option>
+                      <option value="School Main Gate">🚪 Campus Main Academic Gate</option>
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={handleSimulateScan}
+                      className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <QrCode className="w-4 h-4 text-indigo-400" />
+                      <span>Simulate Optical Scan Check-In</span>
+                    </button>
+                  </div>
+
+                  <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-900 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <Bus className="w-4 h-4 text-indigo-600" />
+                      <span>How attendance tracking works:</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      1. Students show this digital pass on their phone or as a printed badge card.<br />
+                      2. The bus conductor or homeroom teacher scans the QR code with their mobile phone or handheld laser scanner.<br />
+                      3. Attendance status is instantly recorded and synced with the school administration registry.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Scan History Log */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h4 className="text-sm font-bold text-slate-900">Recent Attendance Check-in Logs</h4>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Live Verification</span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {attendanceScanLogs.map((log) => (
+                      <div 
+                        key={log.id} 
+                        className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-800 truncate">{log.location}</div>
+                          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                            <span>{log.timestamp}</span>
+                            <span>•</span>
+                            <span>{log.method}</span>
+                          </div>
+                        </div>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          {log.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

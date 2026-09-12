@@ -74,86 +74,11 @@ interface Submission {
   feedback?: string;
 }
 
-const DEFAULT_TEACHERS: Teacher[] = [
-  {
-    id: 't-1',
-    name: 'Dr. Samuel Margai',
-    email: 's.margai@school.edu.sl',
-    phone: '+232 76 543210',
-    subjects: ['Mathematics', 'Further Maths'],
-    classes: ['SSS 1', 'SSS 2', 'SSS 3'],
-    salary: 4500000,
-    hireDate: '2021-09-01',
-    payrollStatus: 'Paid',
-    avatarColor: 'bg-indigo-600'
-  },
-  {
-    id: 't-2',
-    name: 'Mrs. Hawa Sesay',
-    email: 'h.sesay@school.edu.sl',
-    phone: '+232 77 123456',
-    subjects: ['English Language', 'Literature'],
-    classes: ['JSS 1', 'JSS 2', 'JSS 3', 'SSS 1'],
-    salary: 3800000,
-    hireDate: '2022-01-15',
-    payrollStatus: 'Paid',
-    avatarColor: 'bg-emerald-600'
-  },
-  {
-    id: 't-3',
-    name: 'Mr. Joseph Kamara',
-    email: 'j.kamara@school.edu.sl',
-    phone: '+232 30 112233',
-    subjects: ['Chemistry', 'Physics'],
-    classes: ['SSS 2', 'SSS 3'],
-    salary: 4200000,
-    hireDate: '2020-10-05',
-    payrollStatus: 'Pending',
-    avatarColor: 'bg-amber-600'
-  }
-];
+const DEFAULT_TEACHERS: Teacher[] = [];
 
-const DEFAULT_ASSIGNMENTS: Assignment[] = [
-  {
-    id: 'a-1',
-    teacherId: 't-1',
-    teacherName: 'Dr. Samuel Margai',
-    title: 'Algebraic Functions & Quadratic Equations',
-    description: 'Solve all questions in Exercise 4B of the textbook. Write down step-by-step proofs for the quadratic formula deduction.',
-    subject: 'Mathematics',
-    className: 'SSS 1',
-    dueDate: '2026-07-28',
-    maxPoints: 100,
-    createdAt: '2026-07-20'
-  },
-  {
-    id: 'a-2',
-    teacherId: 't-2',
-    teacherName: 'Mrs. Hawa Sesay',
-    title: 'Prepositions and Sentence Clauses Analysis',
-    description: 'Provide an essay of 400 words discussing prepositional structures and identify independent clauses within your own text.',
-    subject: 'English Language',
-    className: 'JSS 3',
-    dueDate: '2026-07-25',
-    maxPoints: 50,
-    createdAt: '2026-07-19'
-  }
-];
+const DEFAULT_ASSIGNMENTS: Assignment[] = [];
 
-const DEFAULT_SUBMISSIONS: Submission[] = [
-  {
-    id: 'sub-1',
-    assignmentId: 'a-1',
-    studentId: 'stud-1',
-    studentName: 'Alpha Koroma',
-    className: 'SSS 1',
-    submittedAt: '2026-07-20 14:30',
-    textResponse: 'Completed all steps of quadratic equations and cross-checked with the discriminants. Please see attached file.',
-    fileName: 'alpha_math_ex4b.pdf',
-    fileSize: '1.2 MB',
-    status: 'Pending'
-  }
-];
+const DEFAULT_SUBMISSIONS: Submission[] = [];
 
 export default function StaffManagement({ students }: StaffManagementProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -200,27 +125,40 @@ export default function StaffManagement({ students }: StaffManagementProps) {
 
   // Load States
   useEffect(() => {
-    const cachedTeachers = localStorage.getItem('sma_teachers');
-    const cachedAssignments = localStorage.getItem('sma_assignments');
-    const cachedSubmissions = localStorage.getItem('sma_submissions');
+    const loadStaffData = () => {
+      const cachedTeachers = localStorage.getItem('sma_teachers');
+      const cachedAssignments = localStorage.getItem('sma_assignments');
+      const cachedSubmissions = localStorage.getItem('sma_submissions');
 
-    if (cachedTeachers) setTeachers(JSON.parse(cachedTeachers));
-    else {
-      setTeachers(DEFAULT_TEACHERS);
-      localStorage.setItem('sma_teachers', JSON.stringify(DEFAULT_TEACHERS));
-    }
+      if (cachedTeachers) {
+        setTeachers(JSON.parse(cachedTeachers));
+      } else {
+        setTeachers(DEFAULT_TEACHERS);
+        localStorage.setItem('sma_teachers', JSON.stringify(DEFAULT_TEACHERS));
+      }
 
-    if (cachedAssignments) setAssignments(JSON.parse(cachedAssignments));
-    else {
-      setAssignments(DEFAULT_ASSIGNMENTS);
-      localStorage.setItem('sma_assignments', JSON.stringify(DEFAULT_ASSIGNMENTS));
-    }
+      if (cachedAssignments) {
+        setAssignments(JSON.parse(cachedAssignments));
+      } else {
+        setAssignments(DEFAULT_ASSIGNMENTS);
+        localStorage.setItem('sma_assignments', JSON.stringify(DEFAULT_ASSIGNMENTS));
+      }
 
-    if (cachedSubmissions) setSubmissions(JSON.parse(cachedSubmissions));
-    else {
-      setSubmissions(DEFAULT_SUBMISSIONS);
-      localStorage.setItem('sma_submissions', JSON.stringify(DEFAULT_SUBMISSIONS));
-    }
+      if (cachedSubmissions) {
+        setSubmissions(JSON.parse(cachedSubmissions));
+      } else {
+        setSubmissions(DEFAULT_SUBMISSIONS);
+        localStorage.setItem('sma_submissions', JSON.stringify(DEFAULT_SUBMISSIONS));
+      }
+    };
+
+    loadStaffData();
+    window.addEventListener('sma_database_wiped', loadStaffData);
+    window.addEventListener('storage', loadStaffData);
+    return () => {
+      window.removeEventListener('sma_database_wiped', loadStaffData);
+      window.removeEventListener('storage', loadStaffData);
+    };
   }, []);
 
   // Save Helpers

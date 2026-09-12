@@ -38,44 +38,7 @@ interface IncidentRecord {
   issuerName: string;
 }
 
-const DEFAULT_INCIDENTS: IncidentRecord[] = [
-  {
-    id: 'inc-1',
-    studentId: 'stud-1',
-    studentName: 'Alpha Koroma',
-    className: 'SSS 1',
-    type: 'Commendation',
-    category: 'Honesty & Integrity',
-    description: 'Found a misplaced envelope containing cash on the school grounds and immediately handed it over to the Principal Registrar office without opening it.',
-    actionTaken: 'Evangelist Saint Turay issued an official Certificate of Honesty during morning assembly.',
-    date: '2026-07-15',
-    issuerName: 'Evangelist Saint Turay (Principal & Co-Founder)'
-  },
-  {
-    id: 'inc-2',
-    studentId: 'stud-2',
-    studentName: 'Fatmata Kamara',
-    className: 'JSS 3',
-    type: 'Commendation',
-    category: 'Academic Mentorship',
-    description: 'Organized and led voluntary peer-to-peer revision sessions in the library for English Literature, helping several JSS students improve their mid-term scores.',
-    actionTaken: 'Awarded 50 merit points towards the end-of-year house cup.',
-    date: '2026-07-18',
-    issuerName: 'Mrs. Hawa Sesay'
-  },
-  {
-    id: 'inc-3',
-    studentId: 'stud-3',
-    studentName: 'Mohamed Bangura',
-    className: 'SSS 2',
-    type: 'Warning',
-    category: 'Tardiness',
-    description: 'Arrived late to morning assembly and registration 4 times in the past two weeks without a valid parental written excuse.',
-    actionTaken: 'First official warning issued; parents contacted by SMS and telephone.',
-    date: '2026-07-10',
-    issuerName: 'Dr. Samuel Margai'
-  }
-];
+const DEFAULT_INCIDENTS: IncidentRecord[] = [];
 
 export default function StudentDisciplinaryPanel({ students }: StudentDisciplinaryPanelProps) {
   const [incidents, setIncidents] = useState<IncidentRecord[]>([]);
@@ -97,13 +60,23 @@ export default function StudentDisciplinaryPanel({ students }: StudentDisciplina
   const [formIssuer, setFormIssuer] = useState('');
 
   useEffect(() => {
-    const cached = localStorage.getItem('sma_incidents');
-    if (cached) {
-      setIncidents(JSON.parse(cached));
-    } else {
-      setIncidents(DEFAULT_INCIDENTS);
-      localStorage.setItem('sma_incidents', JSON.stringify(DEFAULT_INCIDENTS));
-    }
+    const loadIncidents = () => {
+      const cached = localStorage.getItem('sma_incidents');
+      if (cached) {
+        setIncidents(JSON.parse(cached));
+      } else {
+        setIncidents(DEFAULT_INCIDENTS);
+        localStorage.setItem('sma_incidents', JSON.stringify(DEFAULT_INCIDENTS));
+      }
+    };
+
+    loadIncidents();
+    window.addEventListener('sma_database_wiped', loadIncidents);
+    window.addEventListener('storage', loadIncidents);
+    return () => {
+      window.removeEventListener('sma_database_wiped', loadIncidents);
+      window.removeEventListener('storage', loadIncidents);
+    };
   }, []);
 
   // Save Helper

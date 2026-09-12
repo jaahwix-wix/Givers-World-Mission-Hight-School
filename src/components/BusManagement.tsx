@@ -39,38 +39,7 @@ interface SchoolBus {
   status: 'Idle' | 'In Transit' | 'Completed' | 'Maintenance';
 }
 
-const DEFAULT_BUSES: SchoolBus[] = [
-  {
-    id: 'bus-1',
-    name: 'Kambia Express Shuttle',
-    licensePlate: 'SL-584-B',
-    driverName: 'Brima Conteh',
-    driverPhone: '+232 76 112233',
-    routeDescription: 'Kambia 2 - Town Center - School Campus',
-    capacity: 40,
-    status: 'In Transit'
-  },
-  {
-    id: 'bus-2',
-    name: 'Lumley Coastal Cruiser',
-    licensePlate: 'SL-209-A',
-    driverName: 'Mohamed Bangura',
-    driverPhone: '+232 78 554433',
-    routeDescription: 'Lumley Beach - Juba - Wilkinson Road - School Campus',
-    capacity: 30,
-    status: 'Idle'
-  },
-  {
-    id: 'bus-3',
-    name: 'Congo Cross Express',
-    licensePlate: 'SL-911-C',
-    driverName: 'Alimamy Kamara',
-    driverPhone: '+232 30 998877',
-    routeDescription: 'Congo Cross - Campbell Street - Circular Road - School Campus',
-    capacity: 35,
-    status: 'Completed'
-  }
-];
+const DEFAULT_BUSES: SchoolBus[] = [];
 
 export default function BusManagement({ students }: BusManagementProps) {
   const [buses, setBuses] = useState<SchoolBus[]>([]);
@@ -99,29 +68,32 @@ export default function BusManagement({ students }: BusManagementProps) {
 
   // Load state from local storage or set defaults
   useEffect(() => {
-    const cachedBuses = localStorage.getItem('sma_buses');
-    const cachedAssignments = localStorage.getItem('sma_bus_assignments');
-    
-    if (cachedBuses) {
-      setBuses(JSON.parse(cachedBuses));
-    } else {
-      setBuses(DEFAULT_BUSES);
-      localStorage.setItem('sma_buses', JSON.stringify(DEFAULT_BUSES));
-    }
+    const loadBusData = () => {
+      const cachedBuses = localStorage.getItem('sma_buses');
+      const cachedAssignments = localStorage.getItem('sma_bus_assignments');
+      
+      if (cachedBuses) {
+        setBuses(JSON.parse(cachedBuses));
+      } else {
+        setBuses(DEFAULT_BUSES);
+        localStorage.setItem('sma_buses', JSON.stringify(DEFAULT_BUSES));
+      }
 
-    if (cachedAssignments) {
-      setAssignments(JSON.parse(cachedAssignments));
-    } else {
-      // Create some default assignments for active students to make the UI populated
-      const activeStuds = students.filter(s => s.status === 'Active');
-      const initial: Record<string, string> = {};
-      activeStuds.forEach((s, idx) => {
-        if (idx % 3 === 0) initial[s.id] = 'bus-1';
-        else if (idx % 3 === 1) initial[s.id] = 'bus-2';
-      });
-      setAssignments(initial);
-      localStorage.setItem('sma_bus_assignments', JSON.stringify(initial));
-    }
+      if (cachedAssignments) {
+        setAssignments(JSON.parse(cachedAssignments));
+      } else {
+        setAssignments({});
+        localStorage.setItem('sma_bus_assignments', JSON.stringify({}));
+      }
+    };
+
+    loadBusData();
+    window.addEventListener('sma_database_wiped', loadBusData);
+    window.addEventListener('storage', loadBusData);
+    return () => {
+      window.removeEventListener('sma_database_wiped', loadBusData);
+      window.removeEventListener('storage', loadBusData);
+    };
   }, [students]);
 
   // Save changes helper

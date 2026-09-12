@@ -29,8 +29,13 @@ import {
   INITIAL_ACADEMIC_RECORDS, 
   INITIAL_NATIONAL_EXAMS, 
   INITIAL_FEE_LEDGERS,
+  DEMO_SAMPLE_STUDENTS,
+  DEMO_SAMPLE_ACADEMIC_RECORDS,
+  DEMO_SAMPLE_NATIONAL_EXAMS,
+  DEMO_SAMPLE_FEE_LEDGERS,
   SCHOOL_INFO 
 } from './initialData';
+import { wipeAllSystemData, loadSampleDemoData } from './utils/dataStore';
 
 // Component Imports
 import Dashboard from './components/Dashboard';
@@ -150,30 +155,55 @@ export default function App() {
     }
   }, [role]);
 
-  // 1. Initial Load: Sync with LocalStorage or set mocks
+  // 1. Initial Load: Sync with LocalStorage or set clean live production state
   useEffect(() => {
-    const cachedStudents = localStorage.getItem('sma_students');
-    const cachedRecords = localStorage.getItem('sma_academic_records');
-    const cachedExamPreps = localStorage.getItem('sma_exam_preps');
-    const cachedFees = localStorage.getItem('sma_fee_ledgers');
+    const GO_LIVE_VERSION_KEY = 'sma_live_go_live_cleared_v2';
 
-    if (cachedStudents && cachedRecords && cachedExamPreps && cachedFees) {
-      setStudents(JSON.parse(cachedStudents));
-      setRecords(JSON.parse(cachedRecords));
-      setExamPreps(JSON.parse(cachedExamPreps));
-      setFees(JSON.parse(cachedFees));
-    } else {
-      // Seed Database
-      setStudents(INITIAL_STUDENTS);
-      setRecords(INITIAL_ACADEMIC_RECORDS);
-      setExamPreps(INITIAL_NATIONAL_EXAMS);
-      setFees(INITIAL_FEE_LEDGERS);
-      
-      localStorage.setItem('sma_students', JSON.stringify(INITIAL_STUDENTS));
-      localStorage.setItem('sma_academic_records', JSON.stringify(INITIAL_ACADEMIC_RECORDS));
-      localStorage.setItem('sma_exam_preps', JSON.stringify(INITIAL_NATIONAL_EXAMS));
-      localStorage.setItem('sma_fee_ledgers', JSON.stringify(INITIAL_FEE_LEDGERS));
+    // If migrating to live production, wipe all previous mock/demo data
+    if (localStorage.getItem(GO_LIVE_VERSION_KEY) !== 'true') {
+      wipeAllSystemData();
+      localStorage.setItem(GO_LIVE_VERSION_KEY, 'true');
+      setStudents([]);
+      setRecords([]);
+      setExamPreps([]);
+      setFees([]);
+      return;
     }
+
+    const loadData = () => {
+      const cachedStudents = localStorage.getItem('sma_students');
+      const cachedRecords = localStorage.getItem('sma_academic_records');
+      const cachedExamPreps = localStorage.getItem('sma_exam_preps');
+      const cachedFees = localStorage.getItem('sma_fee_ledgers');
+
+      if (cachedStudents && cachedRecords && cachedExamPreps && cachedFees) {
+        setStudents(JSON.parse(cachedStudents));
+        setRecords(JSON.parse(cachedRecords));
+        setExamPreps(JSON.parse(cachedExamPreps));
+        setFees(JSON.parse(cachedFees));
+      } else {
+        // Initialize clean state for production
+        setStudents(INITIAL_STUDENTS);
+        setRecords(INITIAL_ACADEMIC_RECORDS);
+        setExamPreps(INITIAL_NATIONAL_EXAMS);
+        setFees(INITIAL_FEE_LEDGERS);
+        
+        localStorage.setItem('sma_students', JSON.stringify(INITIAL_STUDENTS));
+        localStorage.setItem('sma_academic_records', JSON.stringify(INITIAL_ACADEMIC_RECORDS));
+        localStorage.setItem('sma_exam_preps', JSON.stringify(INITIAL_NATIONAL_EXAMS));
+        localStorage.setItem('sma_fee_ledgers', JSON.stringify(INITIAL_FEE_LEDGERS));
+      }
+    };
+
+    loadData();
+    window.addEventListener('sma_database_wiped', loadData);
+    window.addEventListener('sma_database_loaded_demo', loadData);
+    window.addEventListener('storage', loadData);
+    return () => {
+      window.removeEventListener('sma_database_wiped', loadData);
+      window.removeEventListener('sma_database_loaded_demo', loadData);
+      window.removeEventListener('storage', loadData);
+    };
   }, []);
 
   // Helpers to persist state modifications
@@ -343,15 +373,19 @@ export default function App() {
   };
 
   const handleResetData = () => {
-    setStudents(INITIAL_STUDENTS);
-    setRecords(INITIAL_ACADEMIC_RECORDS);
-    setExamPreps(INITIAL_NATIONAL_EXAMS);
-    setFees(INITIAL_FEE_LEDGERS);
+    wipeAllSystemData();
+    setStudents([]);
+    setRecords([]);
+    setExamPreps([]);
+    setFees([]);
+  };
 
-    saveStateToStorage('sma_students', INITIAL_STUDENTS);
-    saveStateToStorage('sma_academic_records', INITIAL_ACADEMIC_RECORDS);
-    saveStateToStorage('sma_exam_preps', INITIAL_NATIONAL_EXAMS);
-    saveStateToStorage('sma_fee_ledgers', INITIAL_FEE_LEDGERS);
+  const handleLoadDemoData = () => {
+    loadSampleDemoData();
+    setStudents(DEMO_SAMPLE_STUDENTS);
+    setRecords(DEMO_SAMPLE_ACADEMIC_RECORDS);
+    setExamPreps(DEMO_SAMPLE_NATIONAL_EXAMS);
+    setFees(DEMO_SAMPLE_FEE_LEDGERS);
   };
 
   // Helper to deep route tabs and clear/set navigation params
@@ -701,6 +735,7 @@ export default function App() {
                   fees={fees} 
                   onRestoreData={handleRestoreData}
                   onResetData={handleResetData}
+                  onLoadDemoData={handleLoadDemoData}
                 />
               )}
             </>
