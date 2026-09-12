@@ -31,7 +31,10 @@ import {
   ShieldCheck,
   Clock,
   Lock,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown,
+  SlidersHorizontal,
+  RotateCcw
 } from 'lucide-react';
 import { Student, StudentClass, SSSStream } from '../types';
 import { CLASSES_LIST, SSS_STREAMS } from '../constants';
@@ -78,6 +81,21 @@ export default function StudentList({
   const [selectedClass, setSelectedClass] = useState<StudentClass | 'All'>('All');
   const [selectedStream, setSelectedStream] = useState<SSSStream | 'All'>('All');
   const [selectedGender, setSelectedGender] = useState<'All' | 'Male' | 'Female'>('All');
+  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Active' | 'Transferred' | 'Graduated'>('All');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close filter dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setIsFilterDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
@@ -347,6 +365,20 @@ export default function StudentList({
     setIsModalOpen(false);
   };
 
+  // Count of active filters
+  const activeFiltersCount = (selectedClass !== 'All' ? 1 : 0) +
+                             (selectedStream !== 'All' ? 1 : 0) +
+                             (selectedGender !== 'All' ? 1 : 0) +
+                             (selectedStatus !== 'All' ? 1 : 0);
+
+  const resetAllFilters = () => {
+    setSelectedClass('All');
+    setSelectedStream('All');
+    setSelectedGender('All');
+    setSelectedStatus('All');
+    setSearch('');
+  };
+
   // Filter students based on state
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -355,8 +387,9 @@ export default function StudentList({
     const matchesStream = selectedStream === 'All' || 
                           (student.currentClass.startsWith('SSS') && student.stream === selectedStream);
     const matchesGender = selectedGender === 'All' || student.gender === selectedGender;
+    const matchesStatus = selectedStatus === 'All' || student.status === selectedStatus;
     
-    return matchesSearch && matchesClass && matchesStream && matchesGender;
+    return matchesSearch && matchesClass && matchesStream && matchesGender && matchesStatus;
   });
 
   return (
@@ -438,71 +471,313 @@ export default function StudentList({
 
       {/* Filter Bar */}
       {(activeSubTab === 'directory' || activeSubTab === 'medical') && (
-        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3" id="student-filters">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input 
-                type="text" 
-                placeholder="Search Name or Admission ID..." 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 placeholder-slate-400"
-              />
+        <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-xs space-y-3.5" id="student-filters">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
+            {/* Search Bar with Integrated Filter Dropdown Button & Popover */}
+            <div className="lg:col-span-5 relative" ref={filterDropdownRef}>
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input 
+                  type="text" 
+                  id="student-search-input"
+                  placeholder="Search Name or Admission ID..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-24 py-2.5 bg-slate-50 hover:bg-slate-100/70 border border-slate-200/80 rounded-2xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-700 placeholder-slate-400 transition-all"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-20 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200/60 cursor-pointer"
+                    title="Clear search text"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {/* Search Bar Filter Dropdown Trigger Button */}
+                <button
+                  type="button"
+                  id="student-search-filter-dropdown-btn"
+                  onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                  className={`absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    activeFiltersCount > 0
+                      ? 'bg-indigo-600 text-white shadow-2xs'
+                      : isFilterDropdownOpen
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80 shadow-2xs'
+                  }`}
+                  title="Filter by Class, Gender, or Status"
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filter</span>
+                  {activeFiltersCount > 0 ? (
+                    <span className="w-4 h-4 rounded-full bg-white text-indigo-700 text-[10px] font-black flex items-center justify-center">
+                      {activeFiltersCount}
+                    </span>
+                  ) : (
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+                  )}
+                </button>
+              </div>
+
+              {/* Filter Dropdown Popover */}
+              <AnimatePresence>
+                {isFilterDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    id="student-search-filter-dropdown-menu"
+                    className="absolute top-full left-0 mt-2 w-full sm:w-[380px] bg-white rounded-3xl border border-slate-200 shadow-xl p-5 z-50 space-y-4"
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <SlidersHorizontal className="w-4 h-4 text-indigo-600" />
+                        <h4 className="font-bold text-slate-800 text-sm">Filter Student Files</h4>
+                        {activeFiltersCount > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
+                            {activeFiltersCount} active
+                          </span>
+                        )}
+                      </div>
+                      {activeFiltersCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={resetAllFilters}
+                          className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3 h-3" /> Reset
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filter Option 1: Current Class */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                        Current Class Level
+                      </label>
+                      <select
+                        value={selectedClass}
+                        onChange={(e) => {
+                          const val = e.target.value as StudentClass | 'All';
+                          setSelectedClass(val);
+                          if (!val.startsWith('SSS')) setSelectedStream('All');
+                        }}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                      >
+                        <option value="All">All Class Levels (Prep 1 to SSS 3)</option>
+                        {CLASSES_LIST.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* If SSS class or All: Stream */}
+                    {(selectedClass === 'All' || selectedClass.startsWith('SSS')) && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                          SSS Academic Stream
+                        </label>
+                        <select
+                          value={selectedStream}
+                          onChange={(e) => setSelectedStream(e.target.value as SSSStream | 'All')}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        >
+                          <option value="All">All SSS Streams</option>
+                          {SSS_STREAMS.map(s => (
+                            <option key={s} value={s}>{s} Stream</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Filter Option 2: Gender */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                        Student Gender
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[
+                          { val: 'All', label: 'All' },
+                          { val: 'Male', label: 'Boys' },
+                          { val: 'Female', label: 'Girls' }
+                        ].map(item => (
+                          <button
+                            key={item.val}
+                            type="button"
+                            onClick={() => setSelectedGender(item.val as any)}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                              selectedGender === item.val
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Filter Option 3: Status */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                        Enrollment Status
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { val: 'All', label: 'All Statuses' },
+                          { val: 'Active', label: 'Active' },
+                          { val: 'Transferred', label: 'Transferred' },
+                          { val: 'Graduated', label: 'Graduated' },
+                        ].map(item => (
+                          <button
+                            key={item.val}
+                            type="button"
+                            onClick={() => setSelectedStatus(item.val as any)}
+                            className={`py-1.5 px-2.5 rounded-xl text-xs font-bold border text-left flex items-center justify-between transition-all cursor-pointer ${
+                              selectedStatus === item.val
+                                ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
+                          >
+                            <span>{item.label}</span>
+                            {selectedStatus === item.val && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Footer with Result Counter and Apply */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-500">
+                        Matches: <strong className="text-slate-900 font-mono">{filteredStudents.length}</strong> students
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsFilterDropdownOpen(false)}
+                        className="py-1.5 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-2xs cursor-pointer"
+                      >
+                        Apply Filters
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Class Filter */}
-            <div className="relative flex items-center">
+            {/* Quick Dropdown: Current Class */}
+            <div className="lg:col-span-3 relative flex items-center">
               <Filter className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
               <select
                 value={selectedClass}
                 onChange={(e) => {
-                  setSelectedClass(e.target.value as StudentClass | 'All');
-                  // clear stream if class is not SSS
-                  if (!e.target.value.startsWith('SSS')) {
-                    setSelectedStream('All');
-                  }
+                  const val = e.target.value as StudentClass | 'All';
+                  setSelectedClass(val);
+                  if (!val.startsWith('SSS')) setSelectedStream('All');
                 }}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 appearance-none cursor-pointer"
+                className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-700 appearance-none cursor-pointer"
               >
-                <option value="All">All Class Levels</option>
+                <option value="All">All Classes (Prep 1 - SSS 3)</option>
                 {CLASSES_LIST.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 pointer-events-none" />
             </div>
 
-            {/* Stream Filter (Only shows/enables if SSS is selected or general overview) */}
-            <div className="relative flex items-center">
-              <CircleDot className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
-              <select
-                value={selectedStream}
-                onChange={(e) => setSelectedStream(e.target.value as SSSStream | 'All')}
-                disabled={selectedClass !== 'All' && !selectedClass.startsWith('SSS')}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="All">All SSS Streams</option>
-                {SSS_STREAMS.map(s => (
-                  <option key={s} value={s}>{s} Stream</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Gender Filter */}
-            <div className="relative flex items-center">
+            {/* Quick Dropdown: Gender */}
+            <div className="lg:col-span-2 relative flex items-center">
               <Filter className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
               <select
                 value={selectedGender}
                 onChange={(e) => setSelectedGender(e.target.value as 'All' | 'Male' | 'Female')}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200/80 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 appearance-none cursor-pointer"
+                className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-700 appearance-none cursor-pointer"
               >
                 <option value="All">All Genders</option>
-                <option value="Male">Boys</option>
-                <option value="Female">Girls</option>
+                <option value="Male">Boys Only</option>
+                <option value="Female">Girls Only</option>
               </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 pointer-events-none" />
+            </div>
+
+            {/* Quick Dropdown: Status */}
+            <div className="lg:col-span-2 relative flex items-center">
+              <CircleDot className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as 'All' | 'Active' | 'Transferred' | 'Graduated')}
+                className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-700 appearance-none cursor-pointer"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Transferred">Transferred</option>
+                <option value="Graduated">Graduated</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 pointer-events-none" />
             </div>
           </div>
+
+          {/* Active Filter Chips Bar */}
+          {(activeFiltersCount > 0 || search) && (
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100 flex-wrap text-xs">
+              <span className="text-[11px] font-semibold text-slate-400">Active Filters:</span>
+              
+              {search && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                  Search: "{search}"
+                  <button onClick={() => setSearch('')} className="hover:text-indigo-900 cursor-pointer ml-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {selectedClass !== 'All' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                  Class: {selectedClass}
+                  <button onClick={() => { setSelectedClass('All'); setSelectedStream('All'); }} className="hover:text-indigo-900 cursor-pointer ml-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {selectedGender !== 'All' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                  Gender: {selectedGender === 'Male' ? 'Boys' : 'Girls'}
+                  <button onClick={() => setSelectedGender('All')} className="hover:text-indigo-900 cursor-pointer ml-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {selectedStatus !== 'All' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                  Status: {selectedStatus}
+                  <button onClick={() => setSelectedStatus('All')} className="hover:text-indigo-900 cursor-pointer ml-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {selectedStream !== 'All' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                  Stream: {selectedStream}
+                  <button onClick={() => setSelectedStream('All')} className="hover:text-indigo-900 cursor-pointer ml-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={resetAllFilters}
+                className="text-[11px] font-bold text-rose-600 hover:text-rose-800 ml-auto flex items-center gap-1 cursor-pointer"
+              >
+                <RotateCcw className="w-3 h-3" /> Clear All ({filteredStudents.length} of {students.length} students)
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -542,9 +817,22 @@ export default function StudentList({
                         </div>
                       )}
                       <div>
-                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                          {student.admissionNumber}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                            {student.admissionNumber}
+                          </span>
+                          {student.status && (
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                              student.status === 'Active'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : student.status === 'Transferred'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}>
+                              {student.status}
+                            </span>
+                          )}
+                        </div>
                         <h3 className="font-bold text-slate-800 text-base mt-1 truncate max-w-[150px]">{student.name}</h3>
                       </div>
                     </div>
@@ -686,6 +974,17 @@ export default function StudentList({
                         <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
                           {student.admissionNumber}
                         </span>
+                        {student.status && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md ${
+                            student.status === 'Active'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : student.status === 'Transferred'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
+                            {student.status}
+                          </span>
+                        )}
                         {student.verified ? (
                           <span 
                             className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200"
