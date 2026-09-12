@@ -7,7 +7,11 @@ import {
   DEMO_SAMPLE_STUDENTS,
   DEMO_SAMPLE_ACADEMIC_RECORDS,
   DEMO_SAMPLE_NATIONAL_EXAMS,
-  DEMO_SAMPLE_FEE_LEDGERS
+  DEMO_SAMPLE_FEE_LEDGERS,
+  DEFAULT_SCHOOL_ANNOUNCEMENTS,
+  DEFAULT_SAMPLE_TEACHERS,
+  DEFAULT_SAMPLE_ASSIGNMENTS,
+  DEFAULT_SAMPLE_SUBMISSIONS
 } from '../initialData';
 
 export const DATA_STORAGE_KEYS = [
@@ -18,6 +22,8 @@ export const DATA_STORAGE_KEYS = [
   'sma_teachers',
   'sma_assignments',
   'sma_submissions',
+  'sma_announcements',
+  'sma_read_notifications',
   'sma_library_books',
   'sma_library_checkouts',
   'sma_buses',
@@ -43,6 +49,8 @@ export function wipeAllSystemData(): void {
   localStorage.setItem('sma_teachers', JSON.stringify([]));
   localStorage.setItem('sma_assignments', JSON.stringify([]));
   localStorage.setItem('sma_submissions', JSON.stringify([]));
+  localStorage.setItem('sma_announcements', JSON.stringify([]));
+  localStorage.setItem('sma_read_notifications', JSON.stringify([]));
 
   // Clear library catalog and checkouts
   localStorage.setItem('sma_library_books', JSON.stringify([]));
@@ -72,6 +80,11 @@ export function loadSampleDemoData(): void {
   localStorage.setItem('sma_academic_records', JSON.stringify(DEMO_SAMPLE_ACADEMIC_RECORDS));
   localStorage.setItem('sma_exam_preps', JSON.stringify(DEMO_SAMPLE_NATIONAL_EXAMS));
   localStorage.setItem('sma_fee_ledgers', JSON.stringify(DEMO_SAMPLE_FEE_LEDGERS));
+  localStorage.setItem('sma_teachers', JSON.stringify(DEFAULT_SAMPLE_TEACHERS));
+  localStorage.setItem('sma_assignments', JSON.stringify(DEFAULT_SAMPLE_ASSIGNMENTS));
+  localStorage.setItem('sma_submissions', JSON.stringify(DEFAULT_SAMPLE_SUBMISSIONS));
+  localStorage.setItem('sma_announcements', JSON.stringify(DEFAULT_SCHOOL_ANNOUNCEMENTS));
+  localStorage.setItem('sma_read_notifications', JSON.stringify([]));
   localStorage.setItem(LIVE_MODE_INDICATOR_KEY, 'false');
 
   window.dispatchEvent(new CustomEvent('sma_database_loaded_demo'));

@@ -25,60 +25,28 @@ import {
   Award,
   Lock,
   ArrowRight,
-  Search
+  Search,
+  Download,
+  UploadCloud,
+  FileText,
+  ShieldCheck,
+  Clock,
+  CheckCircle2,
+  Paperclip
 } from 'lucide-react';
-import { StudentClass } from '../types';
+import { StudentClass, Teacher, Assignment, Submission } from '../types';
+import PrincipalsNoticeBanner from './PrincipalsNoticeBanner';
+import { 
+  DEFAULT_SAMPLE_TEACHERS, 
+  DEFAULT_SAMPLE_ASSIGNMENTS, 
+  DEFAULT_SAMPLE_SUBMISSIONS, 
+  SCHOOL_INFO 
+} from '../initialData';
+import { useAuth } from '../context/AuthContext';
 
 interface StaffManagementProps {
   students: any[];
 }
-
-interface Teacher {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  subjects: string[];
-  classes: StudentClass[];
-  salary: number;
-  hireDate: string;
-  payrollStatus: 'Paid' | 'Pending' | 'Unpaid';
-  avatarColor?: string;
-}
-
-interface Assignment {
-  id: string;
-  teacherId: string;
-  teacherName: string;
-  title: string;
-  description: string;
-  subject: string;
-  className: StudentClass;
-  dueDate: string;
-  maxPoints: number;
-  createdAt: string;
-}
-
-interface Submission {
-  id: string;
-  assignmentId: string;
-  studentId: string;
-  studentName: string;
-  className: StudentClass;
-  submittedAt: string;
-  textResponse: string;
-  fileName: string;
-  fileSize: string;
-  status: 'Pending' | 'Graded';
-  score?: number;
-  feedback?: string;
-}
-
-const DEFAULT_TEACHERS: Teacher[] = [];
-
-const DEFAULT_ASSIGNMENTS: Assignment[] = [];
-
-const DEFAULT_SUBMISSIONS: Submission[] = [];
 
 export default function StaffManagement({ students }: StaffManagementProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -108,6 +76,11 @@ export default function StaffManagement({ students }: StaffManagementProps) {
   const [formSalary, setFormSalary] = useState(3000000);
   const [formHireDate, setFormHireDate] = useState('');
   const [formPayroll, setFormPayroll] = useState<'Paid' | 'Pending' | 'Unpaid'>('Unpaid');
+  const [formVerified, setFormVerified] = useState(false);
+
+  // Authentication & Verification Permissions (Only Administrator can verify)
+  const { role, can } = useAuth();
+  const canVerify = role === 'admin' || can('canVerifyStaffAndStudents');
 
   // Modal State (Post Assignment)
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
@@ -117,6 +90,9 @@ export default function StaffManagement({ students }: StaffManagementProps) {
   const [assignClass, setAssignClass] = useState<StudentClass>('Class 1');
   const [assignDueDate, setAssignDueDate] = useState('');
   const [assignMaxPoints, setAssignMaxPoints] = useState(100);
+  const [assignAttachmentName, setAssignAttachmentName] = useState('');
+  const [assignAttachmentData, setAssignAttachmentData] = useState('');
+  const [assignAttachmentType, setAssignAttachmentType] = useState('');
 
   // Modal State (Grade Submission)
   const [gradingSubmission, setGradingSubmission] = useState<Submission | null>(null);
@@ -130,26 +106,45 @@ export default function StaffManagement({ students }: StaffManagementProps) {
       const cachedAssignments = localStorage.getItem('sma_assignments');
       const cachedSubmissions = localStorage.getItem('sma_submissions');
 
+      let loadedTeachers = DEFAULT_SAMPLE_TEACHERS;
       if (cachedTeachers) {
-        setTeachers(JSON.parse(cachedTeachers));
+        try {
+          loadedTeachers = JSON.parse(cachedTeachers);
+        } catch {
+          loadedTeachers = DEFAULT_SAMPLE_TEACHERS;
+        }
       } else {
-        setTeachers(DEFAULT_TEACHERS);
-        localStorage.setItem('sma_teachers', JSON.stringify(DEFAULT_TEACHERS));
+        localStorage.setItem('sma_teachers', JSON.stringify(DEFAULT_SAMPLE_TEACHERS));
+      }
+      setTeachers(loadedTeachers);
+
+      if (!selectedTeacherId && loadedTeachers.length > 0) {
+        setSelectedTeacherId(loadedTeachers[0].id);
       }
 
+      let loadedAssignments = DEFAULT_SAMPLE_ASSIGNMENTS;
       if (cachedAssignments) {
-        setAssignments(JSON.parse(cachedAssignments));
+        try {
+          loadedAssignments = JSON.parse(cachedAssignments);
+        } catch {
+          loadedAssignments = DEFAULT_SAMPLE_ASSIGNMENTS;
+        }
       } else {
-        setAssignments(DEFAULT_ASSIGNMENTS);
-        localStorage.setItem('sma_assignments', JSON.stringify(DEFAULT_ASSIGNMENTS));
+        localStorage.setItem('sma_assignments', JSON.stringify(DEFAULT_SAMPLE_ASSIGNMENTS));
       }
+      setAssignments(loadedAssignments);
 
+      let loadedSubmissions = DEFAULT_SAMPLE_SUBMISSIONS;
       if (cachedSubmissions) {
-        setSubmissions(JSON.parse(cachedSubmissions));
+        try {
+          loadedSubmissions = JSON.parse(cachedSubmissions);
+        } catch {
+          loadedSubmissions = DEFAULT_SAMPLE_SUBMISSIONS;
+        }
       } else {
-        setSubmissions(DEFAULT_SUBMISSIONS);
-        localStorage.setItem('sma_submissions', JSON.stringify(DEFAULT_SUBMISSIONS));
+        localStorage.setItem('sma_submissions', JSON.stringify(DEFAULT_SAMPLE_SUBMISSIONS));
       }
+      setSubmissions(loadedSubmissions);
     };
 
     loadStaffData();
@@ -177,6 +172,124 @@ export default function StaffManagement({ students }: StaffManagementProps) {
     localStorage.setItem('sma_submissions', JSON.stringify(newSubs));
   };
 
+  // Toggle Staff Verification (Admin Only)
+  const handleToggleVerifyTeacher = (t: Teacher) => {
+    if (!canVerify) {
+      alert(`Access Restricted: Only the Administrator (${SCHOOL_INFO.principalName}) is authorized to verify staff members.`);
+      return;
+    }
+    const isCurrentVerified = !!t.verified;
+    const newStatus = !isCurrentVerified;
+    const updated = teachers.map(item => item.id === t.id ? {
+      ...item,
+      verified: newStatus,
+      verifiedBy: newStatus ? `${SCHOOL_INFO.principalName} (Admin)` : undefined,
+      verifiedAt: newStatus ? new Date().toISOString().split('T')[0] : undefined,
+    } : item);
+    saveTeachers(updated);
+  };
+
+  // Download Assignment Sheet / Material for Staff & Students
+  const handleDownloadAssignmentSheet = (assign: Assignment) => {
+    if (assign.attachmentData) {
+      const a = document.createElement('a');
+      a.href = assign.attachmentData;
+      a.download = assign.attachmentName || `${assign.title.replace(/\s+/g, '_')}_Worksheet.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const content = `========================================================================
+${SCHOOL_INFO.name.toUpperCase()}
+Principal: ${SCHOOL_INFO.principalName} (${SCHOOL_INFO.principalTitle})
+OFFICIAL HOMEWORK & ASSIGNMENT TASK SHEET
+========================================================================
+Title:         ${assign.title}
+Subject:       ${assign.subject}
+Class / Level: ${assign.className}
+Educator:      ${assign.teacherName}
+Date Assigned: ${assign.createdAt}
+Due Deadline:  ${assign.dueDate}
+Maximum Mark:  ${assign.maxPoints} Points
+------------------------------------------------------------------------
+EXPLICIT TASK INSTRUCTIONS & QUESTIONS:
+------------------------------------------------------------------------
+${assign.description}
+
+========================================================================
+All students should submit answers through the official Student Portal.
+========================================================================`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${assign.title.replace(/[^a-zA-Z0-9_-]/g, '_')}_Assignment_Sheet.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  // Download Student's Completed Submission (Staff download student work)
+  const handleDownloadSubmission = (sub: Submission, assign?: Assignment) => {
+    if (sub.fileData) {
+      const a = document.createElement('a');
+      a.href = sub.fileData;
+      a.download = sub.fileName || `${sub.studentName.replace(/\s+/g, '_')}_Submission.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const content = `========================================================================
+${SCHOOL_INFO.name.toUpperCase()}
+Principal: ${SCHOOL_INFO.principalName} (${SCHOOL_INFO.principalTitle})
+STUDENT ASSIGNMENT SUBMISSION ARCHIVE
+========================================================================
+Student Name:     ${sub.studentName}
+Student ID:       ${sub.studentId}
+Class / Level:    ${sub.className}
+Assignment Task:  ${assign?.title || 'Academic Task'}
+Subject:          ${assign?.subject || 'Classwork'}
+Submitted At:     ${sub.submittedAt}
+Grading Status:   ${sub.status}
+Score Awarded:    ${sub.score !== undefined ? `${sub.score}/${assign?.maxPoints || 100}` : 'Pending Grading'}
+Attached File:    ${sub.fileName || 'Written Response'} (${sub.fileSize || 'N/A'})
+------------------------------------------------------------------------
+STUDENT'S SUBMITTED RESPONSE & WORK:
+------------------------------------------------------------------------
+${sub.textResponse || '(No direct text body; refer to uploaded file)'}
+
+------------------------------------------------------------------------
+EDUCATOR EVALUATION & FEEDBACK:
+------------------------------------------------------------------------
+${sub.feedback || 'Pending educator grading and remarks.'}
+========================================================================`;
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${sub.studentName.replace(/[^a-zA-Z0-9_-]/g, '_')}_${sub.className}_Submission.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  // Handle staff file upload for assignment
+  const handleAssignmentFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAssignAttachmentName(file.name);
+    setAssignAttachmentType(file.type);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAssignAttachmentData(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Add/Edit Teacher Handlers
   const handleOpenAddTeacher = () => {
     setEditingTeacher(null);
@@ -188,6 +301,7 @@ export default function StaffManagement({ students }: StaffManagementProps) {
     setFormSalary(3500000);
     setFormHireDate(new Date().toISOString().substring(0, 10));
     setFormPayroll('Unpaid');
+    setFormVerified(false);
     setIsTeacherModalOpen(true);
   };
 
@@ -201,6 +315,7 @@ export default function StaffManagement({ students }: StaffManagementProps) {
     setFormSalary(t.salary);
     setFormHireDate(t.hireDate);
     setFormPayroll(t.payrollStatus);
+    setFormVerified(!!t.verified);
     setIsTeacherModalOpen(true);
   };
 
@@ -209,6 +324,7 @@ export default function StaffManagement({ students }: StaffManagementProps) {
     const subList = formSubjects.split(',').map(s => s.trim()).filter(s => s.length > 0);
     
     if (editingTeacher) {
+      const isNowVerified = canVerify ? formVerified : !!editingTeacher.verified;
       const updated = teachers.map(t => t.id === editingTeacher.id ? {
         ...t,
         name: formName,
@@ -218,12 +334,16 @@ export default function StaffManagement({ students }: StaffManagementProps) {
         classes: formClasses,
         salary: formSalary,
         hireDate: formHireDate,
-        payrollStatus: formPayroll
+        payrollStatus: formPayroll,
+        verified: isNowVerified,
+        verifiedBy: isNowVerified ? (editingTeacher.verifiedBy || `${SCHOOL_INFO.principalName} (Admin)`) : undefined,
+        verifiedAt: isNowVerified ? (editingTeacher.verifiedAt || new Date().toISOString().split('T')[0]) : undefined,
       } : t);
       saveTeachers(updated);
     } else {
       const colors = ['bg-indigo-600', 'bg-emerald-600', 'bg-amber-600', 'bg-purple-600', 'bg-rose-600', 'bg-teal-600'];
       const randColor = colors[Math.floor(Math.random() * colors.length)];
+      const isNowVerified = canVerify ? formVerified : false;
       const newTeacher: Teacher = {
         id: `t-${Date.now()}`,
         name: formName,
@@ -234,7 +354,10 @@ export default function StaffManagement({ students }: StaffManagementProps) {
         salary: formSalary,
         hireDate: formHireDate,
         payrollStatus: formPayroll,
-        avatarColor: randColor
+        avatarColor: randColor,
+        verified: isNowVerified,
+        verifiedBy: isNowVerified ? `${SCHOOL_INFO.principalName} (Admin)` : undefined,
+        verifiedAt: isNowVerified ? new Date().toISOString().split('T')[0] : undefined,
       };
       saveTeachers([...teachers, newTeacher]);
     }
@@ -270,6 +393,9 @@ export default function StaffManagement({ students }: StaffManagementProps) {
     setAssignClass(teacher?.classes[0] || 'Class 1');
     setAssignDueDate(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10)); // 5 days out
     setAssignMaxPoints(100);
+    setAssignAttachmentName('');
+    setAssignAttachmentData('');
+    setAssignAttachmentType('');
     setIsAssignmentModalOpen(true);
   };
 
@@ -288,7 +414,10 @@ export default function StaffManagement({ students }: StaffManagementProps) {
       className: assignClass,
       dueDate: assignDueDate,
       maxPoints: assignMaxPoints,
-      createdAt: new Date().toISOString().substring(0, 10)
+      createdAt: new Date().toISOString().substring(0, 10),
+      attachmentName: assignAttachmentName || undefined,
+      attachmentData: assignAttachmentData || undefined,
+      attachmentType: assignAttachmentType || undefined
     };
 
     saveAssignments([...assignments, newAssignment]);
@@ -348,6 +477,9 @@ export default function StaffManagement({ students }: StaffManagementProps) {
 
   return (
     <div className="space-y-6" id="staff-management-panel">
+      {/* Principal's Pinned Executive Notice */}
+      <PrincipalsNoticeBanner variant="staff" />
+
       {/* Flag style header */}
       <div className="bg-slate-900 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-lg border border-slate-800">
         <div className="flex h-1 w-full overflow-hidden absolute top-0 left-0">
@@ -461,7 +593,24 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                           {teacher.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
-                          <h4 className="font-bold text-slate-800 text-sm leading-tight">{teacher.name}</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-bold text-slate-800 text-sm leading-tight">{teacher.name}</h4>
+                            {(teacher.verified || teacher.isVerified) ? (
+                              <span 
+                                className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                title={`Verified Staff by ${teacher.verifiedBy || `${SCHOOL_INFO.principalName} (Principal)`} on ${teacher.verifiedAt || 'Current Session'}`}
+                              >
+                                <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified
+                              </span>
+                            ) : (
+                              <span 
+                                className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-700 border border-amber-200"
+                                title="Pending official Administrator verification"
+                              >
+                                <Clock className="w-3 h-3 text-amber-600" /> Unverified
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
                             <Calendar className="w-3 h-3" /> Hired: {teacher.hireDate}
                           </span>
@@ -514,13 +663,38 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                   </div>
 
                   {/* Salary and actions */}
-                  <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
+                  <div className="pt-4 border-t border-slate-50 flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                     <div>
                       <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Monthly Salary</span>
                       <span className="font-mono font-bold text-slate-800 text-xs">SLL {teacher.salary.toLocaleString()}</span>
                     </div>
 
-                    <div className="flex gap-1.5">
+                    <div className="flex items-center gap-1.5">
+                      {/* Administrator-Only Staff Verification Button */}
+                      {canVerify ? (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleVerifyTeacher(teacher)}
+                          className={`py-1.5 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            (teacher.verified || teacher.isVerified)
+                              ? 'bg-emerald-50 hover:bg-rose-50 text-emerald-700 hover:text-rose-700 border border-emerald-200'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                          }`}
+                          title={(teacher.verified || teacher.isVerified) ? 'Click to revoke staff verification' : `Verify staff as Administrator (Principal: ${SCHOOL_INFO.principalName})`}
+                        >
+                          <ShieldCheck className={`w-3.5 h-3.5 ${(teacher.verified || teacher.isVerified) ? 'text-emerald-600' : 'text-white'}`} />
+                          <span>{(teacher.verified || teacher.isVerified) ? 'Verified' : 'Verify'}</span>
+                        </button>
+                      ) : (
+                        <div 
+                          className="flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-50 border border-slate-200/50 text-slate-400 text-[10px] font-semibold select-none cursor-not-allowed"
+                          title={`Verification restricted to the Administrator (${SCHOOL_INFO.principalName})`}
+                        >
+                          <Lock className="w-3 h-3 text-slate-400" />
+                          <span>{(teacher.verified || teacher.isVerified) ? 'Verified' : 'Unverified'}</span>
+                        </div>
+                      )}
+
                       <button
                         onClick={() => handleOpenEditTeacher(teacher)}
                         className="p-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/50 text-slate-600 rounded-lg cursor-pointer transition-colors"
@@ -628,11 +802,17 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                           </div>
 
                           <p className="text-xs text-slate-500 leading-relaxed mt-2 line-clamp-3">{assign.description}</p>
+                          {assign.attachmentName && (
+                            <div className="mt-2 flex items-center gap-1.5 text-[10px] text-indigo-700 bg-indigo-50/80 px-2.5 py-1 rounded-lg border border-indigo-100 font-mono">
+                              <Paperclip className="w-3 h-3 text-indigo-600 shrink-0" />
+                              <span className="truncate">Attached Material: <strong>{assign.attachmentName}</strong></span>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Stats & Deadline */}
-                        <div className="pt-3 border-t border-slate-200/50 flex flex-wrap justify-between items-center text-[10px] text-slate-400 font-medium">
-                          <div className="flex gap-3">
+                        {/* Stats & Deadline & Download */}
+                        <div className="pt-3 border-t border-slate-200/50 flex flex-wrap justify-between items-center gap-2 text-[10px] text-slate-400 font-medium">
+                          <div className="flex gap-3 items-center">
                             <span>Max points: <span className="font-bold text-slate-700">{assign.maxPoints} pts</span></span>
                             <span>Submissions: <span className="font-bold text-slate-700">{submissionCount}</span></span>
                             {pendingGradingCount > 0 && (
@@ -642,9 +822,19 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                             )}
                           </div>
 
-                          <span className="font-bold text-rose-600 font-mono">
-                            Due Date: {assign.dueDate}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAssignmentSheet(assign)}
+                              className="flex items-center gap-1 px-2 py-1 bg-white hover:bg-slate-100 text-indigo-700 font-bold text-[10px] rounded-lg border border-slate-200 shadow-2xs cursor-pointer transition-colors"
+                              title="Download coursework brief / attached file"
+                            >
+                              <Download className="w-3 h-3 text-indigo-600" /> Download Sheet
+                            </button>
+                            <span className="font-bold text-rose-600 font-mono">
+                              Due: {assign.dueDate}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -666,7 +856,7 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                   <h3 className="font-bold text-slate-800 text-sm flex items-center gap-1.5 border-b border-slate-50 pb-4">
                     <Send className="w-5 h-5 text-indigo-600" /> Student Submissions ({teacherSubmissions.length})
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-1">Review student uploads, add academic scores, and write personalized feedback remarks.</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Review student uploads, download submitted materials, and award scores.</p>
                 </div>
 
                 <div className="space-y-3.5 max-h-[460px] overflow-y-auto pr-1 font-medium">
@@ -693,12 +883,12 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                         </div>
 
                         {/* Homework reference */}
-                        <div className="text-[10px] text-slate-500 bg-white p-2 rounded-lg border border-slate-100">
+                        <div className="text-[10px] text-slate-500 bg-white p-2.5 rounded-lg border border-slate-100 space-y-1">
                           <span className="font-bold text-slate-700 block">Task: {assign?.title}</span>
-                          <span className="text-slate-400 block truncate mt-0.5">{sub.textResponse}</span>
+                          <span className="text-slate-500 block line-clamp-2 mt-0.5 italic">"{sub.textResponse}"</span>
                           {sub.fileName && (
-                            <span className="inline-block mt-1 font-mono text-indigo-600 text-[8px] bg-indigo-50 px-1 py-0.2 rounded border border-indigo-100">
-                              📎 {sub.fileName} ({sub.fileSize})
+                            <span className="inline-flex items-center gap-1 mt-1 font-mono text-indigo-600 text-[9px] bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 font-semibold">
+                              <Paperclip className="w-3 h-3" /> {sub.fileName} ({sub.fileSize})
                             </span>
                           )}
                         </div>
@@ -710,19 +900,31 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                           </div>
                         )}
 
-                        {sub.status === 'Pending' && (
+                        <div className="flex items-center gap-2 pt-1">
+                          {/* Download Student Work Button */}
                           <button
                             type="button"
-                            onClick={() => {
-                              setGradingSubmission(sub);
-                              setGradeScore(assign?.maxPoints || 100);
-                              setGradeFeedback('');
-                            }}
-                            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold rounded-lg text-[10px] cursor-pointer transition-colors border border-indigo-100"
+                            onClick={() => handleDownloadSubmission(sub, assign)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg text-[10px] cursor-pointer transition-colors border border-slate-200 shadow-2xs"
+                            title="Download student answer file or transcript"
                           >
-                            <Award className="w-3.5 h-3.5" /> Grade & Feedback
+                            <Download className="w-3.5 h-3.5 text-indigo-600" /> Download Work
                           </button>
-                        )}
+
+                          {sub.status === 'Pending' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setGradingSubmission(sub);
+                                setGradeScore(assign?.maxPoints || 100);
+                                setGradeFeedback('');
+                              }}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-[10px] cursor-pointer transition-colors shadow-xs"
+                            >
+                              <Award className="w-3.5 h-3.5" /> Grade
+                            </button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -874,6 +1076,37 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                 </select>
               </div>
 
+              {/* Administrative Verification Control (Administrator Only) */}
+              <div className="pt-2 border-t border-slate-100">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                  Administrative Verification & Clearance
+                </label>
+                {canVerify ? (
+                  <div className="p-3 bg-emerald-50/50 border border-emerald-200/60 rounded-xl space-y-1.5">
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formVerified}
+                        onChange={(e) => setFormVerified(e.target.checked)}
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span className="flex items-center gap-1.5">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                        Verified Staff Member (Cleared by Administrator)
+                      </span>
+                    </label>
+                    <p className="text-[10px] text-emerald-700 leading-normal">
+                      Principal {SCHOOL_INFO.principalName} authorization. Verified educators are cleared for class duties and payroll authorization.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center gap-2 text-xs text-slate-500">
+                    <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+                    <span>Staff verification restricted to the Administrator ({SCHOOL_INFO.principalName}). Status: <strong>{formVerified ? 'Verified' : 'Unverified'}</strong></span>
+                  </div>
+                )}
+              </div>
+
               <div className="pt-4 border-t border-slate-100 flex gap-2">
                 <button
                   type="submit"
@@ -935,6 +1168,47 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                 />
               </div>
 
+              {/* Staff Coursework File Upload */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Attach Assignment Material / Worksheet (Optional)</label>
+                <div className="p-3 border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-xl bg-slate-50/60 transition-colors">
+                  <input
+                    type="file"
+                    id="assignment-file-input"
+                    onChange={handleAssignmentFileUpload}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                  />
+                  {assignAttachmentName ? (
+                    <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                      <div className="flex items-center gap-2 truncate">
+                        <Paperclip className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span className="truncate">{assignAttachmentName}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAssignAttachmentName('');
+                          setAssignAttachmentData('');
+                          setAssignAttachmentType('');
+                        }}
+                        className="text-[10px] text-rose-600 hover:text-rose-800 font-bold px-2 py-0.5 rounded hover:bg-rose-50 cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      htmlFor="assignment-file-input"
+                      className="flex items-center justify-center gap-2 text-xs font-bold text-indigo-600 cursor-pointer py-1 hover:text-indigo-700"
+                    >
+                      <UploadCloud className="w-4 h-4" />
+                      <span>Upload Task Document (PDF, Word, Text or Image)</span>
+                    </label>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Target Subject</label>
@@ -993,7 +1267,7 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                   type="submit"
                   className="flex-1 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
                 >
-                  BroadCast Assignment
+                  Broadcast Assignment
                 </button>
                 <button
                   type="button"
@@ -1030,6 +1304,16 @@ export default function StaffManagement({ students }: StaffManagementProps) {
                 <p className="mt-2"><span className="text-slate-400 font-bold uppercase tracking-wider block text-[9px]">Typed response</span> "{gradingSubmission.textResponse}"</p>
                 {gradingSubmission.fileName && <p className="mt-1 font-mono text-[9px] text-indigo-600">📎 {gradingSubmission.fileName}</p>}
               </div>
+
+              {/* Quick Download in Grading Modal */}
+              <button
+                type="button"
+                onClick={() => handleDownloadSubmission(gradingSubmission, assignments.find(a => a.id === gradingSubmission.assignmentId))}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs cursor-pointer transition-colors border border-indigo-200/60 shadow-2xs"
+              >
+                <Download className="w-4 h-4 text-indigo-600" />
+                Download Submitted Work
+              </button>
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Award Score</label>

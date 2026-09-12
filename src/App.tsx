@@ -655,6 +655,7 @@ export default function App() {
                   examPreps={examPreps} 
                   fees={fees} 
                   onNavigate={handleNavigate}
+                  onUpdateStudent={handleUpdateStudent}
                 />
               )}
 

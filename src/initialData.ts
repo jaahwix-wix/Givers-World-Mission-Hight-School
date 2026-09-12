@@ -3,7 +3,18 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger, StudentClass, SSSStream } from './types';
+import { 
+  Student, 
+  StudentAcademicRecord, 
+  NationalExamPrep, 
+  StudentFeeLedger, 
+  StudentClass, 
+  SSSStream,
+  Teacher,
+  Assignment,
+  Submission,
+  SchoolAnnouncement 
+} from './types';
 import { getSubjectsForClass, calculateGrade } from './constants';
 
 import schoolLogo from './assets/logo.jpg';
@@ -44,7 +55,10 @@ export const DEMO_SAMPLE_STUDENTS: Student[] = [
     bloodType: 'O+',
     emergencyContactName: 'Sorie Koroma',
     emergencyContactPhone: '+232 77 123456',
-    emergencyContactRelation: 'Father'
+    emergencyContactRelation: 'Father',
+    verified: true,
+    verifiedBy: 'Evangelist Saint Turay (CEO/Principal & Admin)',
+    verifiedAt: '2024-09-12'
   },
   {
     id: 'stud-002',
@@ -64,7 +78,10 @@ export const DEMO_SAMPLE_STUDENTS: Student[] = [
     bloodType: 'A-',
     emergencyContactName: 'Mariama Mansaray',
     emergencyContactPhone: '+232 76 890123',
-    emergencyContactRelation: 'Mother'
+    emergencyContactRelation: 'Mother',
+    verified: true,
+    verifiedBy: 'Evangelist Saint Turay (CEO/Principal & Admin)',
+    verifiedAt: '2024-09-12'
   },
   {
     id: 'stud-003',
@@ -80,7 +97,8 @@ export const DEMO_SAMPLE_STUDENTS: Student[] = [
     address: '109 Sir Samuel Lewis Road, Aberdeen, Freetown',
     enrollmentYear: 2024,
     status: 'Active',
-    profileColor: 'blue'
+    profileColor: 'blue',
+    verified: false
   },
   {
     id: 'stud-004',
@@ -504,4 +522,196 @@ export const INITIAL_STUDENTS: Student[] = [];
 export const INITIAL_ACADEMIC_RECORDS: StudentAcademicRecord[] = [];
 export const INITIAL_NATIONAL_EXAMS: NationalExamPrep[] = [];
 export const INITIAL_FEE_LEDGERS: StudentFeeLedger[] = [];
+
+export const DEFAULT_SCHOOL_ANNOUNCEMENTS: SchoolAnnouncement[] = [
+  {
+    id: 'ann-001',
+    title: 'Urgent: WASSCE & BECE Candidate File Verification',
+    message: 'All Class Masters and exam candidates are advised that registration verification closes on Friday. Only official Administrator-verified student files signed by Principal Evangelist Saint Turay will be transmitted to the WAEC Kambia regional registry.',
+    date: 'Today, 08:30 AM',
+    priority: 'urgent',
+    author: 'Evangelist Saint Turay (CEO/Principal)',
+    category: 'administrative'
+  },
+  {
+    id: 'ann-002',
+    title: 'Urgent: Term 3 Tuition Fee Clearance Deadline',
+    message: 'Notice to all guardians: The final deadline for Term 3 tuition settlement is next Monday. Please review the fee portal or visit the Bursary to verify receipts before continuous assessment exams.',
+    date: 'Yesterday, 02:15 PM',
+    priority: 'urgent',
+    author: 'Bursary & Administration',
+    category: 'fee'
+  },
+  {
+    id: 'ann-003',
+    title: 'New Digital Homework Upload & Download System Active',
+    message: 'Teachers can now upload syllabus worksheets and revision materials directly. Staff can download and grade all student submitted assignments in real-time through the Educator Portal.',
+    date: '2 days ago',
+    priority: 'normal',
+    author: 'Evangelist Saint Turay (CEO/Principal)',
+    category: 'academic'
+  },
+  {
+    id: 'ann-004',
+    title: 'Rainy Season Bus Route #2 (Kambia Highway) Update',
+    message: 'Morning pickup times for Route #2 will commence 15 minutes earlier due to road repairs near Kambia Junction. Ensure students are at transit checkpoints on time.',
+    date: '3 days ago',
+    priority: 'normal',
+    author: 'Logistics & Transport Office',
+    category: 'transport'
+  }
+];
+
+export const DEFAULT_SAMPLE_TEACHERS: Teacher[] = [
+  {
+    id: 't-001',
+    name: 'Mr. Sorie Conteh',
+    email: 'sorie.conteh@giversworldmission.edu.sl',
+    phone: '+232 76 345678',
+    subjects: ['Mathematics (Core)', 'Further Mathematics'],
+    classes: ['JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'],
+    salary: 3800000,
+    hireDate: '2021-09-01',
+    payrollStatus: 'Paid',
+    avatarColor: 'indigo',
+    verified: true,
+    verifiedBy: 'Evangelist Saint Turay (CEO/Principal & Admin)',
+    verifiedAt: '2024-09-15'
+  },
+  {
+    id: 't-002',
+    name: 'Mrs. Mariama Sesay',
+    email: 'mariama.sesay@giversworldmission.edu.sl',
+    phone: '+232 78 912345',
+    subjects: ['English Language', 'Literature in English'],
+    classes: ['JSS 2', 'JSS 3', 'SSS 2', 'SSS 3'],
+    salary: 3600000,
+    hireDate: '2020-01-15',
+    payrollStatus: 'Paid',
+    avatarColor: 'emerald',
+    verified: true,
+    verifiedBy: 'Evangelist Saint Turay (CEO/Principal & Admin)',
+    verifiedAt: '2024-09-15'
+  },
+  {
+    id: 't-003',
+    name: 'Dr. Joseph Kamara',
+    email: 'joseph.kamara@giversworldmission.edu.sl',
+    phone: '+232 30 554433',
+    subjects: ['Chemistry', 'Biology', 'Integrated Science'],
+    classes: ['JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'],
+    salary: 4200000,
+    hireDate: '2022-03-10',
+    payrollStatus: 'Pending',
+    avatarColor: 'amber',
+    verified: false,
+    verifiedBy: undefined,
+    verifiedAt: undefined
+  },
+  {
+    id: 't-004',
+    name: 'Mr. Alie Bangura',
+    email: 'alie.bangura@giversworldmission.edu.sl',
+    phone: '+232 77 889900',
+    subjects: ['Physics', 'General Science'],
+    classes: ['Class 6', 'JSS 1', 'SSS 1'],
+    salary: 3500000,
+    hireDate: '2023-11-01',
+    payrollStatus: 'Unpaid',
+    avatarColor: 'purple',
+    verified: false,
+    verifiedBy: undefined,
+    verifiedAt: undefined
+  }
+];
+
+export const DEFAULT_SAMPLE_ASSIGNMENTS: Assignment[] = [
+  {
+    id: 'assign-001',
+    teacherId: 't-001',
+    teacherName: 'Mr. Sorie Conteh',
+    title: 'Quadratic Equations & Simultaneous Linear Systems',
+    description: 'Solve problems 1 to 10 on quadratic factorization and elimination methods. Show detailed workings for each step in your written worksheet.',
+    subject: 'Mathematics (Core)',
+    className: 'SSS 3',
+    dueDate: '2026-05-15',
+    maxPoints: 100,
+    createdAt: '2026-05-01',
+    attachmentName: 'Quadratic_Equations_Problem_Set.pdf',
+    attachmentSize: '420 KB',
+    attachmentType: 'application/pdf'
+  },
+  {
+    id: 'assign-002',
+    teacherId: 't-002',
+    teacherName: 'Mrs. Mariama Sesay',
+    title: 'WAEC Essay: "The Role of Youth in National Development"',
+    description: 'Write a comprehensive expository essay (between 450 to 500 words) discussing youth involvement in agriculture and technological innovation in Sierra Leone.',
+    subject: 'English Language',
+    className: 'SSS 3',
+    dueDate: '2026-05-18',
+    maxPoints: 50,
+    createdAt: '2026-05-02',
+    attachmentName: 'WAEC_Essay_Writing_Guide.docx',
+    attachmentSize: '280 KB',
+    attachmentType: 'application/msword'
+  },
+  {
+    id: 'assign-003',
+    teacherId: 't-003',
+    teacherName: 'Dr. Joseph Kamara',
+    title: 'Organic Chemistry: Hydrocarbons & Homologous Series',
+    description: 'Provide IUPAC nomenclature for alkanes, alkenes, and functional isomers listed in section 3 of your laboratory manual.',
+    subject: 'Chemistry',
+    className: 'SSS 3',
+    dueDate: '2026-05-20',
+    maxPoints: 60,
+    createdAt: '2026-05-03',
+    attachmentName: 'Organic_Chemistry_Worksheet.pdf',
+    attachmentSize: '510 KB',
+    attachmentType: 'application/pdf'
+  }
+];
+
+export const DEFAULT_SAMPLE_SUBMISSIONS: Submission[] = [
+  {
+    id: 'sub-001',
+    assignmentId: 'assign-001',
+    studentId: 'stud-003',
+    studentName: 'Samuel Bangura',
+    className: 'SSS 3',
+    submittedAt: '2026-05-04 11:30',
+    textResponse: 'Completed all 10 quadratic factorization questions. Used the quadratic formula for problems 7 and 8 where discriminant is non-perfect square. Step-by-step calculations attached.',
+    fileName: 'Samuel_Bangura_Math_Quadratic_Solutions.pdf',
+    fileSize: '680 KB',
+    status: 'Pending'
+  },
+  {
+    id: 'sub-002',
+    assignmentId: 'assign-002',
+    studentId: 'stud-003',
+    studentName: 'Samuel Bangura',
+    className: 'SSS 3',
+    submittedAt: '2026-05-05 14:15',
+    textResponse: 'Expository essay draft completed (490 words). Highlights the transformative potential of mechanized farming and youth literacy clubs in Kambia district.',
+    fileName: 'Samuel_Bangura_English_Essay_Draft.docx',
+    fileSize: '340 KB',
+    status: 'Graded',
+    score: 46,
+    feedback: 'Commendable coherence, persuasive rhetoric, and accurate punctuation. Well-structured introduction!'
+  },
+  {
+    id: 'sub-003',
+    assignmentId: 'assign-001',
+    studentId: 'stud-005',
+    studentName: 'Fatmata Kamara',
+    className: 'SSS 3',
+    submittedAt: '2026-05-06 09:45',
+    textResponse: 'Here are my solutions to the Quadratic Equations problem set. Solved using completing the square method for questions 1 through 5.',
+    fileName: 'Fatmata_Kamara_Quadratic_Worksheet.pdf',
+    fileSize: '512 KB',
+    status: 'Pending'
+  }
+];
+
 

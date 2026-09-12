@@ -48,6 +48,11 @@ import {
 } from 'recharts';
 import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
+import { useAuth } from '../context/AuthContext';
+import PrincipalsNoticeBanner from './PrincipalsNoticeBanner';
+import VerificationQueue from './VerificationQueue';
+import FinancialHealthCard from './FinancialHealthCard';
+import StudentAttendanceTrendsChart from './StudentAttendanceTrendsChart';
 
 interface DashboardProps {
   students: Student[];
@@ -55,9 +60,13 @@ interface DashboardProps {
   examPreps: NationalExamPrep[];
   fees: StudentFeeLedger[];
   onNavigate: (tab: string, arg?: any) => void;
+  onUpdateStudent?: (student: Student) => void;
 }
 
-export default function Dashboard({ students, records, examPreps, fees, onNavigate }: DashboardProps) {
+export default function Dashboard({ students, records, examPreps, fees, onNavigate, onUpdateStudent }: DashboardProps) {
+  const { role, can } = useAuth();
+  const isAdmin = role === 'admin' || can('canVerifyStaffAndStudents');
+
   // 1. Calculations
   const activeStudents = students.filter(s => s.status === 'Active');
   const totalStudentsCount = activeStudents.length;
@@ -444,6 +453,9 @@ CEO/Principal, Givers World Mission`;
 
   return (
     <div className="space-y-6" id="dashboard-tab-panel">
+      {/* 1. Principal's Notice Component at top of Dashboard */}
+      <PrincipalsNoticeBanner variant="dashboard" />
+
       {/* Flag Accented Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-slate-900 text-white p-6 md:p-8 shadow-md" id="school-banner-accent">
         {/* Flag representation in background */}
@@ -661,6 +673,15 @@ CEO/Principal, Givers World Mission`;
         </div>
       </div>
 
+      {/* Administrative Verification Queue (Visible to Admins) */}
+      {isAdmin && (
+        <VerificationQueue 
+          students={students} 
+          onUpdateStudent={onUpdateStudent} 
+          onNavigate={onNavigate} 
+        />
+      )}
+
       {/* Grid: High-level Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="stats-grid">
         {/* Total Students */}
@@ -758,6 +779,9 @@ CEO/Principal, Givers World Mission`;
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Span): Class distribution & High Performers */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Section: Term Attendance Trends Line Chart for Entire School Population */}
+          <StudentAttendanceTrendsChart records={records} students={students} />
+
           {/* Section: Classroom Performance GPA Distribution */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm" id="classroom-performance-section">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -1055,8 +1079,15 @@ CEO/Principal, Givers World Mission`;
           </div>
         </div>
 
-        {/* Right Column (1 Span): National Exams Alerts & Fee issues */}
+        {/* Right Column (1 Span): Financial Health Pie Chart & Fee issues */}
         <div className="space-y-6">
+          {/* Financial Health Summary Card with Paid vs Unpaid Pie Chart */}
+          <FinancialHealthCard 
+            students={students} 
+            fees={fees} 
+            onNavigate={onNavigate} 
+          />
+
           {/* Section: Pending Fee Payments Notification Panel */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm" id="pending-fee-payments-panel">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">

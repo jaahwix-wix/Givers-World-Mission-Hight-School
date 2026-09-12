@@ -27,11 +27,16 @@ import {
   Heart,
   ShieldAlert,
   Users,
-  Printer
+  Printer,
+  ShieldCheck,
+  Clock,
+  Lock,
+  CheckCircle2
 } from 'lucide-react';
 import { Student, StudentClass, SSSStream } from '../types';
 import { CLASSES_LIST, SSS_STREAMS } from '../constants';
 import { SCHOOL_INFO } from '../initialData';
+import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import StudentIdCardModal from './StudentIdCardModal';
 import StudentAttendancePanel from './StudentAttendancePanel';
@@ -104,6 +109,27 @@ export default function StudentList({
   const [formEmergencyPhone, setFormEmergencyPhone] = useState('');
   const [formEmergencyRelation, setFormEmergencyRelation] = useState('');
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+
+  // Authentication & Verification Permissions (Only Administrator can verify)
+  const { role, can } = useAuth();
+  const canVerify = role === 'admin' || can('canVerifyStaffAndStudents');
+  const [formVerified, setFormVerified] = useState(false);
+
+  // Toggle student verification (Administrator only)
+  const handleToggleVerifyStudent = (student: Student) => {
+    if (!canVerify) {
+      alert(`Access Restricted: Only the Administrator (${SCHOOL_INFO.principalName}) is authorized to verify student records.`);
+      return;
+    }
+    const newStatus = !student.verified;
+    const updated: Student = {
+      ...student,
+      verified: newStatus,
+      verifiedBy: newStatus ? `${SCHOOL_INFO.principalName} (Admin)` : undefined,
+      verifiedAt: newStatus ? new Date().toISOString().split('T')[0] : undefined,
+    };
+    onUpdateStudent(updated);
+  };
 
   // Camera Management States & Refs
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -216,6 +242,7 @@ export default function StudentList({
     setFormEmergencyName(student.emergencyContactName || '');
     setFormEmergencyPhone(student.emergencyContactPhone || '');
     setFormEmergencyRelation(student.emergencyContactRelation || '');
+    setFormVerified(student.verified || false);
     setCameraError(null);
     setIsCameraActive(false);
     setIsModalOpen(true);
@@ -243,6 +270,7 @@ export default function StudentList({
     setFormEmergencyName('');
     setFormEmergencyPhone('');
     setFormEmergencyRelation('');
+    setFormVerified(false);
     setCameraError(null);
     setIsCameraActive(false);
     setIsModalOpen(true);
@@ -258,6 +286,7 @@ export default function StudentList({
 
     if (editingStudent) {
       // Update
+      const isNowVerified = canVerify ? formVerified : (editingStudent.verified || false);
       const updated: Student = {
         ...editingStudent,
         name: resolvedName,
@@ -277,12 +306,16 @@ export default function StudentList({
         emergencyContactName: formEmergencyName,
         emergencyContactPhone: formEmergencyPhone,
         emergencyContactRelation: formEmergencyRelation,
+        verified: isNowVerified,
+        verifiedBy: isNowVerified ? (editingStudent.verifiedBy || `${SCHOOL_INFO.principalName} (Admin)`) : undefined,
+        verifiedAt: isNowVerified ? (editingStudent.verifiedAt || new Date().toISOString().split('T')[0]) : undefined,
       };
       onUpdateStudent(updated);
     } else {
       // Create
       const newId = `stud-${Date.now()}`;
       const admissionNum = `NS-${formEnrollmentYear}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const isNowVerified = canVerify ? formVerified : false;
       const newStudent: Student = {
         id: newId,
         name: resolvedName,
@@ -297,6 +330,9 @@ export default function StudentList({
         address: formAddress || 'Freetown, Sierra Leone',
         enrollmentYear: formEnrollmentYear,
         status: formStatus,
+        verified: isNowVerified,
+        verifiedBy: isNowVerified ? `${SCHOOL_INFO.principalName} (Admin)` : undefined,
+        verifiedAt: isNowVerified ? new Date().toISOString().split('T')[0] : undefined,
         profileColor: ['emerald', 'blue', 'purple', 'rose', 'pink', 'amber', 'teal', 'cyan', 'sky'][Math.floor(Math.random() * 9)],
         profileImage: formProfileImage,
         allergies: formAllergies,
@@ -646,9 +682,26 @@ export default function StudentList({
                       </div>
                     )}
                     <div>
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
-                        {student.admissionNumber}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                          {student.admissionNumber}
+                        </span>
+                        {student.verified ? (
+                          <span 
+                            className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            title={`Officially Verified by ${student.verifiedBy || SCHOOL_INFO.principalName} on ${student.verifiedAt || '2025/2026 Session'}`}
+                          >
+                            <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified
+                          </span>
+                        ) : (
+                          <span 
+                            className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-50 text-amber-700 border border-amber-200"
+                            title="Pending official Administrator verification"
+                          >
+                            <Clock className="w-3 h-3 text-amber-600" /> Unverified
+                          </span>
+                        )}
+                      </div>
                       <h3 className="font-bold text-slate-800 text-base mt-1 truncate max-w-[150px]">{student.name}</h3>
                     </div>
                   </div>
@@ -682,7 +735,7 @@ export default function StudentList({
                 </div>
 
                 {/* Card Action Rails */}
-                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold gap-2">
+                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold gap-1.5 flex-wrap sm:flex-nowrap">
                   <button 
                     onClick={() => onNavigate('report-card', { studentId: student.id })}
                     className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-100/30 transition-colors cursor-pointer"
@@ -701,6 +754,31 @@ export default function StudentList({
                   >
                     <CreditCard className="w-3.5 h-3.5" /> ID Card
                   </button>
+
+                  {/* Administrator-Only Student Verification Button */}
+                  {canVerify ? (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleVerifyStudent(student)}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        student.verified
+                          ? 'bg-emerald-50 hover:bg-rose-50 text-emerald-700 hover:text-rose-700 border border-emerald-200'
+                          : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                      }`}
+                      title={student.verified ? 'Click to revoke student verification' : `Verify student file (Principal: ${SCHOOL_INFO.principalName})`}
+                    >
+                      <ShieldCheck className={`w-3.5 h-3.5 ${student.verified ? 'text-emerald-600' : 'text-white'}`} />
+                      <span>{student.verified ? 'Verified' : 'Verify'}</span>
+                    </button>
+                  ) : (
+                    <div 
+                      className="flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded-xl bg-slate-50 border border-slate-200/50 text-slate-400 text-[10px] font-semibold select-none cursor-not-allowed"
+                      title={`Student verification is restricted to the Administrator (${SCHOOL_INFO.principalName})`}
+                    >
+                      <Lock className="w-3 h-3 text-slate-400" />
+                      <span>{student.verified ? 'Verified' : 'Unverified'}</span>
+                    </div>
+                  )}
                   
                   <div className="flex items-center gap-1">
                     <button 
@@ -1180,6 +1258,55 @@ export default function StudentList({
                           />
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* 5. OFFICIAL VERIFICATION & CLEARANCE (Admin Only) */}
+                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" /> Administrative Verification & Clearance
+                    </h4>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-4">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                            Officially Verified File
+                          </span>
+                          {formVerified ? (
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full">
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full">
+                              Unverified
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {canVerify
+                            ? `Authorized under Principal ${SCHOOL_INFO.principalName} (${SCHOOL_INFO.principalTitle}). Only administrators can toggle verification.`
+                            : `Verification is restricted to the Administrator (${SCHOOL_INFO.principalName}). Staff cannot alter verification status.`}
+                        </p>
+                      </div>
+
+                      {canVerify ? (
+                        <button
+                          type="button"
+                          onClick={() => setFormVerified(!formVerified)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                            formVerified
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-xs'
+                              : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {formVerified ? 'Verified ✓' : 'Mark Verified'}
+                        </button>
+                      ) : (
+                        <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1.5 rounded-xl border border-slate-200 shrink-0">
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Admin Only</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -20,6 +20,8 @@ import {
 import { Student, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
+import NotificationDropdown from './NotificationDropdown';
 
 interface GlobalHeaderProps {
   students: Student[];
@@ -31,6 +33,7 @@ interface GlobalHeaderProps {
 
 export default function GlobalHeader({ students, fees, activeTab, onNavigate, onOpenPrivileges }: GlobalHeaderProps) {
   const { user, role, privileges, isFirebaseOnline } = useAuth();
+  const { alerts, unreadCount, markAsRead, markAllAsRead, addAnnouncement } = useNotifications({ students, fees });
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -267,6 +270,16 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate, on
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>Academic Year: 2025/2026</span>
         </div>
+
+        {/* Notification Bell with Dropdown */}
+        <NotificationDropdown 
+          alerts={alerts}
+          unreadCount={unreadCount}
+          markAsRead={markAsRead}
+          markAllAsRead={markAllAsRead}
+          onNavigate={onNavigate}
+          onAddAnnouncement={addAnnouncement}
+        />
 
         {/* Role & Privileges Trigger */}
         <button

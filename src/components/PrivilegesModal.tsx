@@ -109,6 +109,7 @@ export default function PrivilegesModal({ isOpen, onClose }: PrivilegesModalProp
     { key: 'canManageLibrary', label: 'Library Catalog, Checkouts & Returns', module: 'Library' },
     { key: 'canBackupData', label: 'System Backup, JSON Export & Core Settings', module: 'System' },
     { key: 'canManageUserRoles', label: 'User Role Assignment & Privileges Control', module: 'Security' },
+    { key: 'canVerifyStaffAndStudents', label: 'Official Verification of Staff & Students (Principal: Evangelist Saint Turay)', module: 'Governance' },
   ];
 
   return (

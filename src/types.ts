@@ -32,6 +32,9 @@ export interface Student {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   emergencyContactRelation?: string;
+  verified?: boolean;
+  verifiedBy?: string;
+  verifiedAt?: string;
 }
 
 export interface SubjectGrade {
@@ -132,6 +135,7 @@ export interface RolePrivileges {
   canBackupData: boolean; // System backup & restore, core configs
   canManageUserRoles: boolean; // Manage user accounts and privilege assignments
   canViewStudentPortal: boolean; // Student/Parent personal academic and fee tracking
+  canVerifyStaffAndStudents: boolean; // Strictly restricted: verify staff & student records (Principal/Admin only)
 }
 
 export interface AuthUser {
@@ -142,3 +146,90 @@ export interface AuthUser {
   role: UserRole;
   isCustomRole?: boolean;
 }
+
+export interface Teacher {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  subjects: string[];
+  classes: StudentClass[];
+  salary: number;
+  hireDate: string;
+  payrollStatus: 'Paid' | 'Pending' | 'Unpaid';
+  avatarColor?: string;
+  verified?: boolean;
+  verifiedBy?: string;
+  verifiedAt?: string;
+}
+
+export interface Assignment {
+  id: string;
+  teacherId: string;
+  teacherName: string;
+  title: string;
+  description: string;
+  subject: string;
+  className: StudentClass;
+  dueDate: string;
+  maxPoints: number;
+  createdAt: string;
+  attachmentName?: string;
+  attachmentSize?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentData?: string;
+}
+
+export interface Submission {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  studentName: string;
+  className: StudentClass;
+  submittedAt: string;
+  textResponse: string;
+  fileName: string;
+  fileSize: string;
+  fileUrl?: string;
+  fileData?: string;
+  status: 'Pending' | 'Graded';
+  score?: number;
+  feedback?: string;
+}
+
+export interface SchoolAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  priority: 'urgent' | 'normal';
+  author: string;
+  category?: 'fee' | 'academic' | 'transport' | 'administrative';
+}
+
+export interface PrincipalsNotice {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  role: string;
+  date: string;
+  isPinned: boolean;
+  priority: 'High Priority' | 'Urgent Executive Order' | 'Official Directive';
+  category: string;
+  lastUpdated?: string;
+}
+
+export interface NotificationAlert {
+  id: string;
+  type: 'fee' | 'assignment' | 'announcement';
+  title: string;
+  description: string;
+  timestamp: string;
+  priority: 'urgent' | 'high' | 'medium' | 'normal';
+  read: boolean;
+  linkTab?: string;
+  linkArgs?: any;
+}
+
