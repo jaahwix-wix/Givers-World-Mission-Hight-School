@@ -33,8 +33,10 @@ import {
   ShieldAlert,
   Building2,
   ShieldCheck,
-  PhoneCall
+  PhoneCall,
+  RefreshCw
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { 
   BarChart, 
   Bar, 
@@ -66,6 +68,27 @@ interface DashboardProps {
 export default function Dashboard({ students, records, examPreps, fees, onNavigate, onUpdateStudent }: DashboardProps) {
   const { role, can } = useAuth();
   const isAdmin = role === 'admin' || can('canVerifyStaffAndStudents');
+
+  // Subtle Loading & Sync Animation State during data operations
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('Live');
+
+  React.useEffect(() => {
+    setIsSyncing(true);
+    const timer = setTimeout(() => {
+      setIsSyncing(false);
+      setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 650);
+    return () => clearTimeout(timer);
+  }, [students.length, records.length, examPreps.length, fees.length]);
+
+  const handleManualRefresh = () => {
+    setIsSyncing(true);
+    setTimeout(() => {
+      setIsSyncing(false);
+      setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 650);
+  };
 
   // 1. Calculations
   const activeStudents = students.filter(s => s.status === 'Active');
@@ -682,25 +705,63 @@ CEO/Principal, Givers World Mission`;
         />
       )}
 
+      {/* Section Header: KPI Metrics Toolbar with Live Sync Indicator */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Key Performance Indicators</h2>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
+            <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}`}></span>
+            {isSyncing ? 'Recalculating...' : 'Live Metrics Synced'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <span className="text-[11px] text-slate-400">Updated: {lastSyncTime}</span>
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:border-indigo-300 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+            title="Recalculate and refresh KPI metrics"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-indigo-600' : ''}`} />
+            <span>{isSyncing ? 'Recalculating...' : 'Recalculate'}</span>
+          </button>
+        </div>
+      </div>
+
       {/* Grid: High-level Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="stats-grid">
         {/* Total Students */}
         <div 
           onClick={() => onNavigate('students')}
-          className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden" 
+          className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden ${isSyncing ? 'animate-shimmer' : ''}`} 
           id="stat-card-students"
         >
+          {/* Subtle Top Loading Line */}
+          {isSyncing && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-slate-100 dark:bg-slate-800 overflow-hidden z-20">
+              <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 animate-striped-progress w-full" />
+            </div>
+          )}
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Total Enrollment</p>
-              <h3 className="text-3xl font-bold text-slate-800 mt-1">{totalStudentsCount}</h3>
+              <motion.h3 
+                key={`students-${totalStudentsCount}-${isSyncing}`}
+                initial={{ opacity: 0.6, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25 }}
+                className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1"
+              >
+                {totalStudentsCount}
+              </motion.h3>
             </div>
-            <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 rounded-xl text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
               <Users className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-semibold text-indigo-600">Free Quality Edu</span>
+          <div className="mt-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">Free Quality Edu</span>
             <span>•</span>
             <span>{maleCount} Boys / {femaleCount} Girls ({femalePercentage}% Girls)</span>
           </div>
@@ -710,21 +771,35 @@ CEO/Principal, Givers World Mission`;
         {/* Academic Performance */}
         <div 
           onClick={() => onNavigate('performance')}
-          className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden ${isSyncing ? 'animate-shimmer' : ''}`}
           id="stat-card-performance"
         >
+          {/* Subtle Top Loading Line */}
+          {isSyncing && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-slate-100 dark:bg-slate-800 overflow-hidden z-20">
+              <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-striped-progress w-full" />
+            </div>
+          )}
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">School-Wide Avg</p>
-              <h3 className="text-3xl font-bold text-slate-800 mt-1">{schoolAverageScore}%</h3>
+              <motion.h3 
+                key={`score-${schoolAverageScore}-${isSyncing}`}
+                initial={{ opacity: 0.6, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25 }}
+                className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1"
+              >
+                {schoolAverageScore}%
+              </motion.h3>
             </div>
-            <div className="p-3 bg-blue-50 rounded-xl text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-xl text-blue-600 dark:text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <Award className="w-3.5 h-3.5 text-blue-500" />
-            <span className="font-semibold text-blue-600">Satisfactory</span>
+            <span className="font-semibold text-blue-600 dark:text-blue-400">Satisfactory</span>
             <span>overall standing (Term 3)</span>
           </div>
           <div className="absolute bottom-0 left-0 h-1 bg-blue-500 w-full transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
@@ -733,19 +808,33 @@ CEO/Principal, Givers World Mission`;
         {/* Exam Candidates */}
         <div 
           onClick={() => onNavigate('performance', { tab: 'exams' })}
-          className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden ${isSyncing ? 'animate-shimmer' : ''}`}
           id="stat-card-exams"
         >
+          {/* Subtle Top Loading Line */}
+          {isSyncing && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-slate-100 dark:bg-slate-800 overflow-hidden z-20">
+              <div className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 animate-striped-progress w-full" />
+            </div>
+          )}
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">National Exams</p>
-              <h3 className="text-3xl font-bold text-slate-800 mt-1">{examCandidateCount}</h3>
+              <motion.h3 
+                key={`exams-${examCandidateCount}-${isSyncing}`}
+                initial={{ opacity: 0.6, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25 }}
+                className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1"
+              >
+                {examCandidateCount}
+              </motion.h3>
             </div>
-            <div className="p-3 bg-purple-50 rounded-xl text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+            <div className="p-3 bg-purple-50 dark:bg-purple-950/50 rounded-xl text-purple-600 dark:text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-colors">
               <GraduationCap className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-1 text-xs text-slate-500">
+          <div className="mt-4 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
             <BookOpen className="w-3.5 h-3.5 text-purple-500 animate-pulse" />
             <span>NPSE, BECE & WASSCE Tracks</span>
           </div>
@@ -755,19 +844,33 @@ CEO/Principal, Givers World Mission`;
         {/* Fees Ledger Balance */}
         <div 
           onClick={() => onNavigate('fees')}
-          className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden"
+          className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all cursor-pointer group relative overflow-hidden ${isSyncing ? 'animate-shimmer' : ''}`}
           id="stat-card-fees"
         >
+          {/* Subtle Top Loading Line */}
+          {isSyncing && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-slate-100 dark:bg-slate-800 overflow-hidden z-20">
+              <div className="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 animate-striped-progress w-full" />
+            </div>
+          )}
           <div className="flex justify-between items-start">
             <div>
               <p className="text-slate-400 text-xs font-medium uppercase tracking-wider">Unpaid Dues</p>
-              <h3 className="text-3xl font-bold text-slate-800 mt-1">SLE {totalOutstanding.toLocaleString()}</h3>
+              <motion.h3 
+                key={`fees-${totalOutstanding}-${isSyncing}`}
+                initial={{ opacity: 0.6, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25 }}
+                className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1"
+              >
+                SLE {totalOutstanding.toLocaleString()}
+              </motion.h3>
             </div>
-            <div className="p-3 bg-amber-50 rounded-xl text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/50 rounded-xl text-amber-600 dark:text-amber-400 group-hover:bg-amber-500 group-hover:text-white transition-colors">
               <Wallet className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="mt-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
             <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
             <span>Outstanding tuition term collections</span>
           </div>
