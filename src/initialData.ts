@@ -20,9 +20,11 @@ import { getSubjectsForClass, calculateGrade } from './constants';
 import schoolLogo from './assets/logo.jpg';
 
 export const SCHOOL_INFO = {
-  name: 'GIVERS WORLD MISSION',
-  systemName: 'Givers World Mission Management System',
-  motto: 'Veritas Omnia Vincit',
+  name: 'Givers World Mission Diplomats Academy',
+  shortName: 'G.W.D.A',
+  systemName: 'Givers World Mission Diplomats Academy MIS',
+  motto: 'Eagles Squad',
+  slogan: 'Eagles Squad',
   address: 'Kambia 2, Northern Province, Kambia, Sierra Leone',
   phone: '034 055410',
   email: 'info@giversworldmission.edu.sl',
