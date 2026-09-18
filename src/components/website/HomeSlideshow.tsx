@@ -11,67 +11,77 @@ import {
   Play, 
   Pause, 
   Sparkles, 
-  Monitor, 
   GraduationCap, 
   BookOpen, 
   ArrowRight,
   ShieldCheck,
-  MapPin
+  MapPin,
+  Award,
+  Users
 } from 'lucide-react';
-
-import pupilsAssemblyImg from '../../assets/images/school_pupils_assembly_1789727285450.jpg';
-import classroomImg from '../../assets/images/pupils_in_classroom_1789727304279.jpg';
-import computerLabImg from '../../assets/images/students_computer_lab_1789727321474.jpg';
+import { getSchoolPhotoSrc, onSchoolPhotosUpdated } from '../../utils/photoManager';
 
 interface Slide {
   id: string;
+  filename: string;
   title: string;
   subtitle: string;
   category: string;
   icon: any;
-  image: string;
   alt: string;
   ctaText: string;
   ctaAction: string;
   stats: { label: string; value: string };
 }
 
-const SLIDES: Slide[] = [
+const SLIDES_CONFIG: Slide[] = [
   {
-    id: 'assembly',
+    id: 'scholars',
+    filename: 'IMG-20260918-WA0028.jpg',
     title: 'Nurturing Academic & Moral Champions in Kambia 1',
     subtitle: 'From Nursery to College Diplomas, our pupils and students thrive in a disciplined, Christian-principled environment with 100% NPSE, BECE & WASSCE pass rates.',
-    category: 'Pupils & Students in Assembly',
+    category: 'Secondary Scholars & Eagles Squad',
     icon: GraduationCap,
-    image: pupilsAssemblyImg,
-    alt: 'Givers World Mission Diplomats Academy pupils and students gathered in assembly in school uniforms in Kambia 1',
+    alt: 'Givers World Mission Diplomats Academy scholars in official uniform blazers with faculty in Kambia 1',
     ctaText: 'Explore Academics & College',
     ctaAction: 'academics',
     stats: { label: 'Accreditation', value: 'MBSDSE Approved' }
   },
   {
     id: 'classroom',
-    title: 'Interactive Classrooms with Passionate Educators',
-    subtitle: 'Small student-teacher ratios ensure individualized coaching in Sciences, Arts, Commerce, and College degree courses with modern textbooks and curriculum.',
-    category: 'Classroom Instruction',
+    filename: 'IMG-20260918-WA0027.jpg',
+    title: 'Interactive Classrooms with Rigorous Examination',
+    subtitle: 'Primary pupils seated in ventilated classrooms at individual desks, mastering coursework and national examination syllabus under dedicated educators.',
+    category: 'Primary Classroom & Exams',
     icon: BookOpen,
-    image: classroomImg,
-    alt: 'Engaged pupils in modern classroom at Givers World Mission Diplomats Academy in Kambia 1',
+    alt: 'Primary pupils writing examination tests in classroom at Givers World Mission in Kambia 1',
     ctaText: 'View Class Noticeboard & SMS',
     ctaAction: 'notices',
     stats: { label: 'Examination Center', value: 'WAEC / NPSE / BECE' }
   },
   {
-    id: 'computer-lab',
-    title: 'State-of-the-Art Computer & ICT Laboratory',
-    subtitle: 'Hands-on digital literacy, computer coding, internet research, and professional software training for pupils from primary school through college level.',
-    category: 'Modern Computer ICT Lab',
-    icon: Monitor,
-    image: computerLabImg,
-    alt: 'Students actively working in the modern computer lab at Givers World Mission in Kambia 1',
+    id: 'graduation-lineup',
+    filename: 'IMG-20260918-WA0020.jpg',
+    title: 'Annual Commencement & Milestone Graduation',
+    subtitle: 'Celebrating the academic excellence and promotion of pupils across Nursery, Primary, and Secondary divisions in full academic regalia.',
+    category: 'Annual Convocation Ceremony',
+    icon: Award,
+    alt: 'Grand graduation ceremony lineup of pupils in academic robes at Givers World Mission in Kambia',
+    ctaText: 'Browse Events Gallery',
+    ctaAction: 'gallery',
+    stats: { label: 'Excellence', value: '100% Pass Rates' }
+  },
+  {
+    id: 'college-green',
+    filename: 'IMG-20260918-WA0022.jpg',
+    title: 'College Division: Higher Diplomas & Professional Degrees',
+    subtitle: 'Equipping senior scholars and future leaders with accredited tertiary certifications, leadership mentorship, and community diplomatic service.',
+    category: 'College Division Scholars',
+    icon: Users,
+    alt: 'Graduating female scholars in emerald green robes in assembly hall at Givers World Mission College',
     ctaText: 'Tour Campus Facilities',
     ctaAction: 'facilities',
-    stats: { label: 'Workstations', value: '45+ Desktop PCs' }
+    stats: { label: 'Division', value: 'College of Theology & Tech' }
   }
 ];
 
@@ -83,82 +93,74 @@ export default function HomeSlideshow({ onNavigate }: HomeSlideshowProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [direction, setDirection] = useState<number>(1);
+  const [, setUpdateTrigger] = useState(0);
 
-  // Auto-play timer
+  useEffect(() => {
+    const unsub = onSchoolPhotosUpdated(() => {
+      setUpdateTrigger(prev => prev + 1);
+    });
+    return unsub;
+  }, []);
+
+  // Autoplay timer
   useEffect(() => {
     if (isPaused) return;
+
     const interval = setInterval(() => {
       setDirection(1);
-      setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
-    }, 6000);
+      setCurrentIndex((prev) => (prev + 1) % SLIDES_CONFIG.length);
+    }, 6500);
+
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isPaused, currentIndex]);
 
   const handleNext = () => {
     setDirection(1);
-    setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
+    setCurrentIndex((prev) => (prev + 1) % SLIDES_CONFIG.length);
   };
 
   const handlePrev = () => {
     setDirection(-1);
-    setCurrentIndex((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
+    setCurrentIndex((prev) => (prev - 1 + SLIDES_CONFIG.length) % SLIDES_CONFIG.length);
   };
 
-  const currentSlide = SLIDES[currentIndex];
+  const handleDotClick = (index: number) => {
+    setDirection(index > currentIndex ? 1 : -1);
+    setCurrentIndex(index);
+  };
+
+  const currentSlide = SLIDES_CONFIG[currentIndex];
   const IconComponent = currentSlide.icon;
-
-  const slideVariants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? '100%' : '-100%',
-      opacity: 0,
-      scale: 1.05
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-      scale: 1,
-      transition: {
-        x: { type: 'spring', stiffness: 300, damping: 30 },
-        opacity: { duration: 0.5 },
-        scale: { duration: 0.7 }
-      }
-    },
-    exit: (dir: number) => ({
-      x: dir > 0 ? '-100%' : '100%',
-      opacity: 0,
-      scale: 0.98,
-      transition: {
-        x: { type: 'spring', stiffness: 300, damping: 30 },
-        opacity: { duration: 0.4 }
-      }
-    })
-  };
+  const currentImgSrc = getSchoolPhotoSrc(currentSlide.filename);
 
   return (
     <div 
-      className="relative w-full overflow-hidden bg-slate-950 text-white rounded-3xl shadow-2xl border border-slate-800 my-4"
+      className="relative w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-950 group select-none"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      id="home-hero-slideshow"
+      id="hero-slideshow-container"
     >
-      {/* Slideshow Canvas */}
-      <div className="relative h-[480px] sm:h-[540px] md:h-[600px] w-full overflow-hidden">
-        <AnimatePresence initial={false} custom={direction} mode="popLayout">
+      {/* 16:9 / Responsive Height Hero Container */}
+      <div className="relative w-full min-h-[440px] sm:min-h-[520px] md:min-h-[580px] lg:min-h-[620px] flex items-end">
+        <AnimatePresence initial={false} custom={direction}>
           <motion.div
             key={currentSlide.id}
             custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
             className="absolute inset-0 w-full h-full"
           >
-            {/* Background Image with Ken-Burns Subtle Scale */}
             <img 
-              src={currentSlide.image} 
+              src={currentImgSrc} 
               alt={currentSlide.alt}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-center transform scale-100 transition-transform duration-7000 ease-out"
+              onError={(e) => {
+                // Keep the deep dark background if image is pending
+                (e.target as HTMLElement).style.opacity = '0.3';
+              }}
             />
             
             {/* Cinematic Gradients for Optimal Contrast */}
@@ -182,6 +184,10 @@ export default function HomeSlideshow({ onNavigate }: HomeSlideshowProps) {
                 <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-white/10 text-white/90 backdrop-blur-md">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                   Eagles Squad
+                </span>
+
+                <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-800/80 text-slate-300 backdrop-blur-md">
+                  {currentSlide.filename}
                 </span>
               </div>
 
@@ -224,10 +230,10 @@ export default function HomeSlideshow({ onNavigate }: HomeSlideshowProps) {
 
                 <button
                   type="button"
-                  onClick={() => onNavigate('admissions')}
+                  onClick={() => onNavigate('gallery')}
                   className="px-4 py-3 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-100 font-bold text-sm border border-slate-700/80 backdrop-blur-md transition-colors cursor-pointer"
                 >
-                  Enroll for 2026/2027
+                  View 10 Campus Photos
                 </button>
 
                 <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/70 border border-slate-800/80 text-xs text-slate-300 backdrop-blur-md ml-auto">
@@ -240,96 +246,56 @@ export default function HomeSlideshow({ onNavigate }: HomeSlideshowProps) {
           </motion.div>
         </AnimatePresence>
 
-        {/* Previous Button */}
+        {/* Previous Slide Button */}
         <button
           type="button"
           onClick={handlePrev}
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white flex items-center justify-center border border-slate-700/60 backdrop-blur-md transition-all hover:scale-110 cursor-pointer z-10 shadow-lg"
           aria-label="Previous Slide"
+          className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 p-2.5 sm:p-3 rounded-full bg-slate-950/40 hover:bg-slate-900/80 text-white/80 hover:text-white border border-white/10 backdrop-blur-md transition-all duration-200 cursor-pointer z-20 hover:scale-105"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
-        {/* Next Button */}
+        {/* Next Slide Button */}
         <button
           type="button"
           onClick={handleNext}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white flex items-center justify-center border border-slate-700/60 backdrop-blur-md transition-all hover:scale-110 cursor-pointer z-10 shadow-lg"
           aria-label="Next Slide"
+          className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 p-2.5 sm:p-3 rounded-full bg-slate-950/40 hover:bg-slate-900/80 text-white/80 hover:text-white border border-white/10 backdrop-blur-md transition-all duration-200 cursor-pointer z-20 hover:scale-105"
         >
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
-        {/* Top Right Auto-play Status Indicator */}
-        <button
-          type="button"
-          onClick={() => setIsPaused(!isPaused)}
-          className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 backdrop-blur-md transition-colors z-10 cursor-pointer"
-          title={isPaused ? "Play slideshow" : "Pause slideshow"}
-        >
-          {isPaused ? (
-            <>
-              <Play className="w-3 h-3 text-emerald-400 fill-emerald-400" />
-              <span>Paused</span>
-            </>
-          ) : (
-            <>
-              <Pause className="w-3 h-3 text-emerald-400" />
-              <span>Auto-playing</span>
-            </>
-          )}
-        </button>
-      </div>
+        {/* Bottom Control Bar: Dots & Pause/Play */}
+        <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-8 z-20 flex items-center gap-2 p-1.5 rounded-full bg-slate-950/60 border border-slate-800/80 backdrop-blur-md">
+          {/* Pause / Play Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsPaused(!isPaused)}
+            aria-label={isPaused ? "Play slideshow" : "Pause slideshow"}
+            className="p-1.5 rounded-full text-slate-300 hover:text-white transition-colors cursor-pointer"
+          >
+            {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+          </button>
 
-      {/* Slide Thumbnails & Progress Navigation Bar */}
-      <div className="bg-slate-900/90 border-t border-slate-800/80 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Progress Dots */}
-        <div className="flex items-center gap-2">
-          {SLIDES.map((slide, idx) => (
-            <button
-              key={slide.id}
-              type="button"
-              onClick={() => {
-                setDirection(idx > currentIndex ? 1 : -1);
-                setCurrentIndex(idx);
-              }}
-              className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                idx === currentIndex 
-                  ? 'w-8 bg-emerald-400 shadow-xs shadow-emerald-400/50' 
-                  : 'w-2.5 bg-slate-700 hover:bg-slate-500'
-              }`}
-              aria-label={`Go to slide ${idx + 1}: ${slide.category}`}
-            />
-          ))}
-          <span className="text-xs text-slate-400 font-medium ml-2">
-            0{currentIndex + 1} / 0{SLIDES.length}
-          </span>
-        </div>
+          <div className="h-3 w-px bg-slate-700" />
 
-        {/* Mini Scene Switchers */}
-        <div className="flex items-center gap-2 overflow-x-auto max-w-full pb-1 sm:pb-0">
-          {SLIDES.map((slide, idx) => {
-            const isSelected = idx === currentIndex;
-            const MiniIcon = slide.icon;
-            return (
+          {/* Dots Indicator */}
+          <div className="flex items-center gap-1.5 px-1">
+            {SLIDES_CONFIG.map((slide, idx) => (
               <button
                 key={slide.id}
                 type="button"
-                onClick={() => {
-                  setDirection(idx > currentIndex ? 1 : -1);
-                  setCurrentIndex(idx);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                onClick={() => handleDotClick(idx)}
+                aria-label={`Go to slide ${idx + 1}: ${slide.title}`}
+                className={`transition-all duration-300 rounded-full cursor-pointer ${
+                  currentIndex === idx
+                    ? 'w-6 h-2 bg-emerald-500'
+                    : 'w-2 h-2 bg-slate-600 hover:bg-slate-400'
                 }`}
-              >
-                <MiniIcon className="w-3.5 h-3.5" />
-                <span>{slide.category}</span>
-              </button>
-            );
-          })}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

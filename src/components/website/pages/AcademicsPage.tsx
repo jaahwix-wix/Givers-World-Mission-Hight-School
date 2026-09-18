@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   GraduationCap, 
   BookOpen, 
@@ -17,8 +17,7 @@ import {
   ShieldCheck,
   ChevronRight
 } from 'lucide-react';
-import classroomImg from '../../../assets/images/pupils_in_classroom_1789727304279.jpg';
-import computerLabImg from '../../../assets/images/students_computer_lab_1789727321474.jpg';
+import { getSchoolPhotoSrc, onSchoolPhotosUpdated } from '../../../utils/photoManager';
 
 interface AcademicsPageProps {
   onNavigate: (page: string) => void;
@@ -26,6 +25,15 @@ interface AcademicsPageProps {
 
 export default function AcademicsPage({ onNavigate }: AcademicsPageProps) {
   const [activeTier, setActiveTier] = useState<'all' | 'nursery' | 'primary' | 'jss' | 'sss' | 'college'>('all');
+  const [, setUpdateTrigger] = useState(0);
+
+  useEffect(() => {
+    const unsub = onSchoolPhotosUpdated(() => setUpdateTrigger(prev => prev + 1));
+    return unsub;
+  }, []);
+
+  const classroomImg = getSchoolPhotoSrc('IMG-20260918-WA0027.jpg');
+  const nurseryGradImg = getSchoolPhotoSrc('IMG-20260918-WA0029.jpg');
 
   const TIERS = [
     {
@@ -304,19 +312,25 @@ export default function AcademicsPage({ onNavigate }: AcademicsPageProps) {
         </div>
 
         <div className="rounded-3xl overflow-hidden bg-white border border-slate-200 shadow-xs p-6 space-y-4">
-          <div className="h-56 rounded-2xl overflow-hidden">
+          <div className="h-56 rounded-2xl overflow-hidden bg-slate-900">
             <img 
-              src={computerLabImg} 
-              alt="Computer lab at Givers World Mission Diplomats Academy in Kambia 1" 
+              src={nurseryGradImg} 
+              alt="Early childhood and nursery graduation in white robes at Givers World Mission in Kambia 1" 
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLElement).style.opacity = '0.4';
+              }}
             />
           </div>
-          <h4 className="text-lg font-black text-slate-900">
-            Hands-on Computer & ICT Training
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-black text-slate-900">
+              Foundational & Nursery Graduations
+            </h4>
+            <span className="text-[10px] font-mono text-slate-400">IMG-20260918-WA0029.jpg</span>
+          </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Equipped with 45+ desktop PCs and internet access, all pupils from primary through senior secondary and college take mandatory computer laboratory sessions.
+            Celebrating literacy and academic milestones from early childhood education in white cap and gown regalia to prepare pupils for primary entrance exams.
           </p>
         </div>
       </section>

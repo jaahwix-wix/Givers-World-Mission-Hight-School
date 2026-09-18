@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import schoolLogo from '../../../assets/logo.jpg';
 import { SCHOOL_INFO } from '../../../initialData';
-import pupilsAssemblyImg from '../../../assets/images/school_pupils_assembly_1789727285450.jpg';
 
 interface AboutPageProps {
   onNavigate: (page: string) => void;

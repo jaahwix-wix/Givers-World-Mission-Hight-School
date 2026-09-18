@@ -15,10 +15,12 @@ import {
   GraduationCap, 
   ShieldCheck,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Camera
 } from 'lucide-react';
 import schoolLogo from '../../assets/logo.jpg';
 import { SCHOOL_INFO } from '../../initialData';
+import PhotoSyncModal from './PhotoSyncModal';
 
 interface WebsiteNavbarProps {
   currentPage: string;
@@ -28,6 +30,7 @@ interface WebsiteNavbarProps {
 
 export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0 }: WebsiteNavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isPhotoSyncOpen, setIsPhotoSyncOpen] = useState(false);
 
   const NAV_ITEMS = [
     { id: 'home', label: 'Home' },
@@ -155,6 +158,16 @@ export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0
         <div className="hidden lg:flex items-center gap-2.5">
           <button
             type="button"
+            onClick={() => setIsPhotoSyncOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black text-xs transition-colors cursor-pointer border border-emerald-200"
+            title="Manage or Sync Attached Real Photos"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Real Photos</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => handleNavClick('login')}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm transition-all hover:shadow-md cursor-pointer"
             id="navbar-portal-login-btn"
@@ -166,6 +179,15 @@ export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0
 
         {/* Mobile Hamburger Button */}
         <div className="flex xl:hidden items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsPhotoSyncOpen(true)}
+            className="p-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 cursor-pointer"
+            title="Photos"
+          >
+            <Camera className="w-3.5 h-3.5 text-emerald-600" />
+          </button>
+
           <button
             type="button"
             onClick={() => handleNavClick('login')}
@@ -232,6 +254,12 @@ export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0
           </div>
         </div>
       )}
+
+      {/* Photo Sync & Real Photos Manager Modal */}
+      <PhotoSyncModal 
+        isOpen={isPhotoSyncOpen} 
+        onClose={() => setIsPhotoSyncOpen(false)} 
+      />
     </header>
   );
 }

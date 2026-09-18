@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Monitor, 
   BookOpen, 
@@ -16,17 +16,27 @@ import {
   Sparkles,
   CheckCircle2,
   MapPin,
-  ArrowRight
+  ArrowRight,
+  Camera
 } from 'lucide-react';
-import computerLabImg from '../../../assets/images/students_computer_lab_1789727321474.jpg';
-import classroomImg from '../../../assets/images/pupils_in_classroom_1789727304279.jpg';
-import pupilsAssemblyImg from '../../../assets/images/school_pupils_assembly_1789727285450.jpg';
+import { getSchoolPhotoSrc, onSchoolPhotosUpdated } from '../../../utils/photoManager';
 
 interface FacilitiesPageProps {
   onNavigate: (page: string) => void;
 }
 
 export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
+  const [, setUpdateTrigger] = useState(0);
+
+  useEffect(() => {
+    const unsub = onSchoolPhotosUpdated(() => setUpdateTrigger(prev => prev + 1));
+    return unsub;
+  }, []);
+
+  const scholarsImg = getSchoolPhotoSrc('IMG-20260918-WA0028.jpg');
+  const assemblyImg = getSchoolPhotoSrc('IMG-20260918-WA0025.jpg');
+  const classroomImg = getSchoolPhotoSrc('IMG-20260918-WA0027.jpg');
+
   return (
     <div className="space-y-12 pb-10" id="website-facilities-page">
       {/* Banner */}
@@ -44,32 +54,35 @@ export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
         </div>
       </section>
 
-      {/* 1. SPOTLIGHT: COMPUTER ICT LABORATORY */}
+      {/* 1. SPOTLIGHT: SCHOLARS DELEGATION & CAMPUS LANDMARK */}
       <section className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-10 shadow-xs">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-6 rounded-2xl overflow-hidden shadow-md border border-slate-100 relative">
+          <div className="lg:col-span-6 rounded-2xl overflow-hidden shadow-md border border-slate-100 relative bg-slate-900">
             <img 
-              src={computerLabImg} 
-              alt="Modern Computer Lab at Givers World Mission Diplomats Academy in Kambia 1" 
+              src={scholarsImg} 
+              alt="Junior Secondary Scholars in ceremonial blazers with faculty at Givers World Mission in Kambia 1" 
               referrerPolicy="no-referrer"
               className="w-full h-80 sm:h-96 object-cover"
+              onError={(e) => {
+                (e.target as HTMLElement).style.opacity = '0.4';
+              }}
             />
-            <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-slate-900/80 text-white text-xs font-black backdrop-blur-md flex items-center gap-1.5">
-              <Monitor className="w-3.5 h-3.5 text-emerald-400" />
-              <span>45+ High-Speed Desktop Workstations</span>
+            <div className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-slate-900/85 text-white text-xs font-black backdrop-blur-md flex items-center gap-1.5 border border-slate-700">
+              <Camera className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Kolenten Landmark & Secondary Scholars</span>
             </div>
           </div>
 
           <div className="lg:col-span-6 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Flagship Campus Facility</span>
+              <span>Campus Discipline & Heritage</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              State-of-the-Art Computer & ICT Laboratory
+              A Structured, Inspiring Environment for Leadership
             </h2>
             <p className="text-sm text-slate-600 leading-relaxed font-normal">
-              In modern education, digital literacy is essential. Givers World Mission Diplomats Academy & College maintains one of the premier computer laboratories in Kambia District, equipped with modern desktop computers, high-speed monitors, and solar power backup.
+              Education at Givers World Mission Diplomats Academy is founded on high academic standards and moral discipline. Our campus grounds are structured to instill pride, unity, and Christian diplomatic stewardship in our pupils and students from their early years through college degrees.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -79,7 +92,7 @@ export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
                   <span>Uninterrupted Power</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Solar inverter and generator backup ensure uninterrupted practical ICT classes.
+                  Solar inverter and generator backup ensure uninterrupted day and evening study sessions.
                 </p>
               </div>
 
@@ -89,27 +102,27 @@ export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
                   <span>Broadband Internet</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  High-speed internet for online academic research, WAEC syllabus exploration, and college projects.
+                  Campus internet for online academic research, WAEC syllabus exploration, and college projects.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center gap-2 font-black text-slate-900 text-xs mb-1">
                   <Monitor className="w-4 h-4 text-emerald-600" />
-                  <span>Software & Coding</span>
+                  <span>Practical ICT Lab</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Microsoft Office Suite, Python, Web development, and typing speed training.
+                  Over 45 workstations with digital software, coding instruction, and typing training.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center gap-2 font-black text-slate-900 text-xs mb-1">
                   <Award className="w-4 h-4 text-purple-600" />
-                  <span>College Diploma Practicals</span>
+                  <span>College Hall & Convocation</span>
                 </div>
                 <p className="text-[11px] text-slate-500">
-                  Dedicated evening and weekend lab hours for tertiary students pursuing diplomas.
+                  Multi-purpose assembly hall for graduations, worship sermons, and music ministry.
                 </p>
               </div>
             </div>
@@ -128,7 +141,7 @@ export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
             Science Demonstration Labs
           </h3>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Fully equipped with chemical reagents, biological specimens, optical microscopes, and circuit apparatus for hands-on WASSCE and BECE science experiments.
+            Fully equipped with chemical reagents, biological specimens, optical microscopes, and circuit apparatus for hands-on WASSCE and BECE science practicals.
           </p>
           <ul className="text-xs text-slate-600 space-y-1.5 pt-2 border-t border-slate-100">
             <li className="flex items-center gap-1.5">
@@ -164,7 +177,7 @@ export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
             </li>
             <li className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Digital library barcode system</span>
+              <span>Digital library study stations</span>
             </li>
             <li className="flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -201,39 +214,51 @@ export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
         </div>
       </section>
 
-      {/* 3. COURTYARD & CAMPUS ENVIRONMENT */}
+      {/* 3. CONVOCATION HALL & CLASSROOM EXAMINATION ENVIRONMENTS */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-3xl overflow-hidden bg-white border border-slate-200 shadow-xs p-6 space-y-4">
-          <div className="h-60 rounded-2xl overflow-hidden">
+          <div className="h-60 rounded-2xl overflow-hidden bg-slate-900">
             <img 
-              src={pupilsAssemblyImg} 
-              alt="Pupils gathered in assembly in Kambia 1" 
+              src={assemblyImg} 
+              alt="Assembly Hall Convocation with Orchestra Drums at Givers World Mission in Kambia 1" 
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLElement).style.opacity = '0.4';
+              }}
             />
           </div>
-          <h4 className="text-lg font-black text-slate-900">
-            Courtyard & Assembly Grounds
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-black text-slate-900">
+              Assembly & Convocation Hall
+            </h4>
+            <span className="text-[10px] font-mono text-slate-400">IMG-20260918-WA0025.jpg</span>
+          </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Our spacious paved grounds accommodate over 1,500 students for morning moral devotion, national anthem flag raising, sports day competitions, and graduation ceremonies.
+            Our multi-purpose campus auditorium accommodates over 1,000 guests for annual graduation commencement, Christian morning worship devotions, and music orchestra assemblies.
           </p>
         </div>
 
         <div className="rounded-3xl overflow-hidden bg-white border border-slate-200 shadow-xs p-6 space-y-4">
-          <div className="h-60 rounded-2xl overflow-hidden">
+          <div className="h-60 rounded-2xl overflow-hidden bg-slate-900">
             <img 
               src={classroomImg} 
-              alt="Classrooms at Givers World Mission Diplomats Academy" 
+              alt="Primary pupils seated in classroom writing tests at Givers World Mission in Kambia 1" 
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLElement).style.opacity = '0.4';
+              }}
             />
           </div>
-          <h4 className="text-lg font-black text-slate-900">
-            Spacious, Ventilated Classrooms
-          </h4>
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-black text-slate-900">
+              Primary Examination Classrooms
+            </h4>
+            <span className="text-[10px] font-mono text-slate-400">IMG-20260918-WA0027.jpg</span>
+          </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Thirty-two modern classrooms engineered for optimal airflow, tropical natural light, high ceiling fans, and clear whiteboard sightlines for pupils of all ages.
+            Authentic classroom setting featuring dual-seat wooden desks, blackboard instruction, student coursework displays, and quiet examination conditions in Kambia 1.
           </p>
         </div>
       </section>
@@ -244,7 +269,7 @@ export default function FacilitiesPage({ onNavigate }: FacilitiesPageProps) {
           Schedule a Campus Visit in Kambia 1
         </h3>
         <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-          We welcome parents, guardians, and prospective college candidates to inspect our computer laboratory, classrooms, and meet our faculty.
+          We welcome parents, guardians, and prospective college candidates to inspect our classrooms, library, and meet our faculty.
         </p>
         <button
           type="button"
