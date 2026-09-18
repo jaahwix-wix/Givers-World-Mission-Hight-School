@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { Student, StudentFeeLedger, StudentClass, FeeSmsAlertRecord } from '../types';
 import { SCHOOL_INFO } from '../initialData';
+import { CLASSES_LIST } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface FeeAlertSMSCenterProps {
@@ -187,10 +188,14 @@ export default function FeeAlertSMSCenter({
     term: number,
     template: string
   ): string => {
+    const classDisplay = student.universityProgram
+      ? `${student.currentClass} (${student.universityProgram})`
+      : student.currentClass;
+
     return template
       .replace(/{GUARDIAN}/g, student.parentName || 'Guardian')
       .replace(/{STUDENT}/g, student.name)
-      .replace(/{CLASS}/g, student.currentClass)
+      .replace(/{CLASS}/g, classDisplay)
       .replace(/{ADMISSION_NO}/g, student.admissionNumber)
       .replace(/{BALANCE}/g, balance.toLocaleString())
       .replace(/{TERM}/g, term.toString())
@@ -394,7 +399,7 @@ export default function FeeAlertSMSCenter({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                  Automated Fee Balance Flagging & SMS Dispatcher
+                  Compose Message — Bulk Parent SMS Notifications
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/40 flex items-center gap-1">
                   <ShieldAlert className="w-3 h-3" />
@@ -402,7 +407,7 @@ export default function FeeAlertSMSCenter({
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Automated system detection of outstanding tuition dues with personalized SMS generator for Sierra Leone guardians
+                Draft and simulate sending bulk SMS notifications to parents of students with outstanding tuition balances
               </p>
             </div>
           </div>
@@ -626,12 +631,7 @@ export default function FeeAlertSMSCenter({
                   className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300"
                 >
                   <option value="All">All Classes</option>
-                  {[
-                    'Prep 1', 'Prep 2',
-                    'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6',
-                    'JSS 1', 'JSS 2', 'JSS 3',
-                    'SSS 1', 'SSS 2', 'SSS 3'
-                  ].map(c => (
+                  {CLASSES_LIST.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
@@ -778,6 +778,11 @@ export default function FeeAlertSMSCenter({
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                 {s.currentClass}
                               </span>
+                              {s.universityProgram && (
+                                <span className="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                  {s.universityProgram}
+                                </span>
+                              )}
                             </td>
 
                             <td className="py-3 px-3">

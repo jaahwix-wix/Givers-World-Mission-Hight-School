@@ -196,7 +196,10 @@ export default function ReportCardView({ students, records, onNavigateBack, init
             <div className="space-y-1">
               <p className="text-slate-400 font-bold text-[9px] uppercase tracking-wider">Current Grade/Class</p>
               <p className="font-bold text-slate-800">
-                {student.currentClass} {student.stream ? `(${student.stream} Stream)` : ''} {student.classSection ? `- ${student.classSection}` : ''}
+                {student.currentClass}
+                {student.universityProgram ? ` (${student.universityProgram} Program)` : ''}
+                {student.stream && !student.universityProgram ? ` (${student.stream} Stream)` : ''}
+                {student.classSection ? ` - ${student.classSection}` : ''}
               </p>
             </div>
             <div className="space-y-1">

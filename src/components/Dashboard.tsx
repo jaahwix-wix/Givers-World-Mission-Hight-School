@@ -55,6 +55,9 @@ import PrincipalsNoticeBanner from './PrincipalsNoticeBanner';
 import VerificationQueue from './VerificationQueue';
 import FinancialHealthCard from './FinancialHealthCard';
 import StudentAttendanceTrendsChart from './StudentAttendanceTrendsChart';
+import PerformanceTrendsCard from './PerformanceTrendsCard';
+import PendingFeeAlertWidget from './PendingFeeAlertWidget';
+import { getPendingFeeStudents } from '../utils/feeUtils';
 
 interface DashboardProps {
   students: Student[];
@@ -250,14 +253,14 @@ CEO/Principal, Givers World Mission`;
 
   // Open modal for single student
   const handleOpenNotice = (
-    e: React.MouseEvent,
     student: Student,
     balance: number,
     totalDue: number,
     term: number,
-    status: 'Unpaid' | 'Partial'
+    status: 'Unpaid' | 'Partial',
+    e?: React.MouseEvent
   ) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     const defaultText = generateNoticeContent(noticeChannel, student, balance, totalDue, term);
     setNoticeMessageText(defaultText);
     setNoticeModal({
@@ -325,35 +328,10 @@ CEO/Principal, Givers World Mission`;
     setTimeout(() => setCopiedNotice(false), 2000);
   };
 
-  // Identifies active students with 'Unpaid' or 'Partial' fee status for the selected term
+  // Identifies active students with 'Unpaid' or 'Partial' fee status for the selected term using getPendingFeeStudents
   const pendingFeeStudents = useMemo(() => {
-    return activeStudents.map(student => {
-      const ledger = fees.find(f => f.studentId === student.id);
-      if (!ledger || !ledger.terms || !ledger.terms[pendingTermFilter]) return null;
-
-      const termFee = ledger.terms[pendingTermFilter];
-      if (termFee.status === 'Unpaid' || termFee.status === 'Partial') {
-        return {
-          student,
-          feeLedger: ledger,
-          term: pendingTermFilter,
-          totalDue: termFee.totalDue,
-          paidAmount: termFee.paidAmount,
-          balance: termFee.balance,
-          status: termFee.status as 'Unpaid' | 'Partial'
-        };
-      }
-      return null;
-    }).filter((item): item is {
-      student: Student;
-      feeLedger: StudentFeeLedger;
-      term: number;
-      totalDue: number;
-      paidAmount: number;
-      balance: number;
-      status: 'Unpaid' | 'Partial';
-    } => item !== null);
-  }, [activeStudents, fees, pendingTermFilter]);
+    return getPendingFeeStudents(students, fees, pendingTermFilter);
+  }, [students, fees, pendingTermFilter]);
 
   // Filter pending list by search query and status filter
   const filteredPendingList = useMemo(() => {
@@ -896,6 +874,9 @@ CEO/Principal, Givers World Mission`;
           {/* Section: Term Attendance Trends Line Chart for Entire School Population */}
           <StudentAttendanceTrendsChart records={records} students={students} />
 
+          {/* Section: Academic Performance Trends Across Terms 1, 2, and 3 using Recharts */}
+          <PerformanceTrendsCard records={records} students={students} onNavigate={onNavigate} />
+
           {/* Section: Classroom Performance GPA Distribution */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm" id="classroom-performance-section">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
@@ -1209,209 +1190,15 @@ CEO/Principal, Givers World Mission`;
             onNavigate={onNavigate} 
           />
 
-          {/* Section: Pending Fee Payments Notification Panel */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm" id="pending-fee-payments-panel">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 shrink-0">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-800 text-base leading-tight">Pending Fee Payments</h3>
-                  <p className="text-slate-400 text-xs mt-0.5">Students with unpaid or partial tuition dues</p>
-                </div>
-              </div>
-
-              {/* Term Selector Tabs */}
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-semibold shrink-0 self-start sm:self-auto">
-                {([1, 2, 3] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setPendingTermFilter(t)}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                      pendingTermFilter === t 
-                        ? 'bg-white text-indigo-600 shadow-xs font-bold' 
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    Term {t} {t === 3 ? '(Active)' : ''}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Term Summary Pill & Bulk Trigger */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-amber-50/70 border border-amber-200 rounded-xl mb-4 text-xs gap-2">
-              <div className="flex items-center gap-2 font-bold text-amber-900">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Term {pendingTermFilter} Outstanding:</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 font-extrabold text-[11px]">
-                  {pendingFeeStudents.length} {pendingFeeStudents.length === 1 ? 'Student' : 'Students'}
-                </span>
-                <span className="font-extrabold text-slate-800 ml-1">
-                  SLE {totalPendingBalanceForTerm.toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onNavigate('fees', { openSmsModal: true, term: pendingTermFilter })}
-                  className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
-                  title="Open Automated Fee Balance Flagging & SMS Dispatch Summary"
-                >
-                  <MessageSquare className="w-3 h-3" />
-                  <span>Guardian SMS Center</span>
-                </button>
-
-                {pendingFeeStudents.filter(s => s.status === 'Unpaid').length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleOpenBulkNotice}
-                    className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
-                    title="Open automated batch notification dialog for all unpaid students"
-                  >
-                    <Send className="w-3 h-3" />
-                    <span>Notify All Unpaid ({pendingFeeStudents.filter(s => s.status === 'Unpaid').length})</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Search & Status Filter Controls */}
-            <div className="flex flex-col sm:flex-row gap-2 mb-3">
-              <div className="relative flex-1">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={pendingSearchQuery}
-                  onChange={(e) => setPendingSearchQuery(e.target.value)}
-                  placeholder="Filter by student name or class..."
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 text-slate-700 placeholder-slate-400 rounded-xl text-xs border border-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
-                {(['All', 'Unpaid', 'Partial'] as const).map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setPendingStatusFilter(st)}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                      pendingStatusFilter === st
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Scrollable List of Pending Fee Students */}
-            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
-              {filteredPendingList.length > 0 ? (
-                filteredPendingList.map((item) => (
-                  <div
-                    key={item.student.id}
-                    onClick={() => onNavigate('fees', { studentId: item.student.id, term: item.term })}
-                    className={`p-3 rounded-xl border transition-all cursor-pointer group flex flex-col gap-2 ${
-                      item.status === 'Unpaid'
-                        ? 'bg-rose-50/30 border-rose-200/80 hover:border-rose-300'
-                        : 'bg-slate-50/50 border-slate-100 hover:border-indigo-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {item.student.profileImage ? (
-                          <img
-                            src={item.student.profileImage}
-                            alt={item.student.name}
-                            className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
-                            {item.student.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                        )}
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h4 className="font-bold text-xs text-slate-800 group-hover:text-indigo-600 transition-colors truncate">
-                              {item.student.name}
-                            </h4>
-                            {item.status === 'Unpaid' && (
-                              <span className="shrink-0 px-1.5 py-0.2 text-[9px] font-black uppercase rounded bg-rose-100 text-rose-700 border border-rose-200 flex items-center gap-0.5">
-                                <ShieldAlert className="w-2.5 h-2.5 text-rose-600 animate-pulse" />
-                                Overdue
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-slate-400 font-medium truncate">
-                            {item.student.currentClass} • Guardian: {item.student.parentName} ({item.student.parentPhone})
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Notify Guardian Button for Unpaid/Pending */}
-                        <button
-                          type="button"
-                          onClick={(e) => handleOpenNotice(e, item.student, item.balance, item.totalDue, item.term, item.status)}
-                          className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs ${
-                            notifiedLog[item.student.id]
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                              : 'bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300'
-                          }`}
-                          title={notifiedLog[item.student.id] ? `Notice sent at ${notifiedLog[item.student.id].timestamp}` : 'Send SMS or Email notice to guardian'}
-                        >
-                          <Bell className={`w-3 h-3 ${notifiedLog[item.student.id] ? 'text-emerald-600' : 'text-rose-600'}`} />
-                          <span>{notifiedLog[item.student.id] ? 'Notified' : 'Notify'}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold transition-colors cursor-pointer flex items-center gap-0.5 shadow-2xs"
-                          title="Collect payment or view ledger"
-                        >
-                          <span>Collect</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Progress & Financial details */}
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1.5 border-t border-slate-200/50 font-medium">
-                      <span>Paid: <strong className="text-slate-700">SLE {item.paidAmount.toLocaleString()}</strong> / {item.totalDue.toLocaleString()}</span>
-                      <span className="text-rose-600 font-bold">Balance: SLE {item.balance.toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-6 text-center text-slate-400 space-y-1.5 border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                  <CheckCircle className="w-6 h-6 text-emerald-500 mx-auto" />
-                  <p className="text-xs font-bold text-slate-700">No Pending Payments</p>
-                  <p className="text-[11px] text-slate-400">
-                    {pendingSearchQuery 
-                      ? 'No students match your search filter.' 
-                      : `All students have settled their tuition fees for Term ${pendingTermFilter}.`}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold">
-              <span className="text-slate-400 text-[11px]">Free Quality Education Subsidies Applied</span>
-              <button
-                onClick={() => onNavigate('fees')}
-                className="text-indigo-600 hover:text-indigo-700 flex items-center gap-1 font-bold cursor-pointer"
-              >
-                <span>Full Financial Ledger</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
+          {/* Section: Pending Fee Payments Visual Alert Widget with Quick-Access List */}
+          <PendingFeeAlertWidget 
+            students={students} 
+            fees={fees} 
+            currentTerm={pendingTermFilter}
+            onNavigate={onNavigate}
+            onOpenNoticeModal={handleOpenNotice}
+            onOpenBulkNotice={handleOpenBulkNotice}
+          />
 
           {/* Section: National Exams Preparedness Alerts */}
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">

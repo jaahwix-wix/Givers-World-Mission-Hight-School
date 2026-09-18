@@ -385,7 +385,15 @@ Submit your solutions via the Givers World Mission High School Student Portal.
                 </span>
               </div>
               <h2 className="text-2xl font-black tracking-tight mt-1">{student.name}</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Current Grade: <span className="font-bold text-white">{student.currentClass}</span> {student.stream ? `(${student.stream} Stream)` : ''}</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Current Level: <span className="font-bold text-white">{student.currentClass}</span>
+                {student.universityProgram && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase">
+                    {student.universityProgram} Program
+                  </span>
+                )}
+                {student.stream && !student.universityProgram ? ` (${student.stream} Stream)` : ''}
+              </p>
             </div>
           </div>
 

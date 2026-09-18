@@ -4,16 +4,19 @@
  */
 
 export type StudentClass =
-  | 'Pre 1' | 'Pre 2' | 'Pre 3'
-  | 'Prep 1' | 'Prep 2' | 'Prep 3'
   | 'Nursery 1' | 'Nursery 2' | 'Nursery 3'
+  | 'Primary 1' | 'Primary 2' | 'Primary 3' | 'Primary 4' | 'Primary 5' | 'Primary 6'
   | 'Class 1' | 'Class 2' | 'Class 3' | 'Class 4' | 'Class 5' | 'Class 6'
   | 'JSS 1' | 'JSS 2' | 'JSS 3'
   | 'SSS 1' | 'SSS 2' | 'SSS 3'
   | 'University Year 1' | 'University Year 2' | 'University Year 3' | 'University Year 4'
+  | 'Pre 1' | 'Pre 2' | 'Pre 3'
+  | 'Prep 1' | 'Prep 2' | 'Prep 3'
   | 'University';
 
 export type SSSStream = 'Science' | 'Arts' | 'Commercial' | 'General';
+
+export type UniversityProgram = 'Certificate' | 'Diploma';
 
 export interface Student {
   id: string;
@@ -23,6 +26,7 @@ export interface Student {
   gender: 'Male' | 'Female';
   currentClass: StudentClass;
   stream?: SSSStream;
+  universityProgram?: UniversityProgram; // Required for university students ('Certificate' | 'Diploma')
   classSection?: string; // e.g. "A", "B"
   parentName: string;
   parentPhone: string;

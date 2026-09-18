@@ -280,6 +280,24 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Compose Message Button for Bulk SMS to Parents with Outstanding Fees */}
+          <button
+            type="button"
+            id="compose-sms-message-btn"
+            onClick={() => {
+              setSmsTargetStudentId(undefined);
+              setIsSmsModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-xl transition-all cursor-pointer shadow-xs active:scale-95"
+            title="Compose and draft bulk SMS notifications to parents of students with outstanding fees"
+          >
+            <Send className="w-3.5 h-3.5" />
+            <span>Compose Message</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white/20 text-white text-[10px] font-bold">
+              Bulk SMS
+            </span>
+          </button>
+
           {/* Automated SMS Fee Alert Center Action */}
           <button
             type="button"
@@ -555,6 +573,20 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
               <option value="Partial">Partial Pay</option>
               <option value="Unpaid">Unpaid</option>
             </select>
+
+            {/* Quick Compose Message Trigger */}
+            <button
+              type="button"
+              onClick={() => {
+                setSmsTargetStudentId(undefined);
+                setIsSmsModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-xl transition-all cursor-pointer shadow-2xs"
+              title="Compose bulk SMS to parents of students with outstanding fees"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Compose Message</span>
+            </button>
           </div>
         </div>
 

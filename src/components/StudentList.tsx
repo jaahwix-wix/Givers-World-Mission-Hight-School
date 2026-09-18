@@ -34,10 +34,12 @@ import {
   CheckCircle2,
   ChevronDown,
   SlidersHorizontal,
-  RotateCcw
+  RotateCcw,
+  GraduationCap,
+  Award
 } from 'lucide-react';
-import { Student, StudentClass, SSSStream } from '../types';
-import { CLASSES_LIST, SSS_STREAMS } from '../constants';
+import { Student, StudentClass, SSSStream, UniversityProgram } from '../types';
+import { CLASSES_LIST, SSS_STREAMS, UNIVERSITY_PROGRAMS } from '../constants';
 import { SCHOOL_INFO } from '../initialData';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -80,6 +82,7 @@ export default function StudentList({
   }, [initialSearch, initialSelectedStudentId, students]);
   const [selectedClass, setSelectedClass] = useState<StudentClass | 'All'>('All');
   const [selectedStream, setSelectedStream] = useState<SSSStream | 'All'>('All');
+  const [selectedProgram, setSelectedProgram] = useState<UniversityProgram | 'All'>('All');
   const [selectedGender, setSelectedGender] = useState<'All' | 'Male' | 'Female'>('All');
   const [selectedStatus, setSelectedStatus] = useState<'All' | 'Active' | 'Transferred' | 'Graduated'>('All');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
@@ -109,8 +112,9 @@ export default function StudentList({
   const [formLastName, setFormLastName] = useState('');
   const [formDob, setFormDob] = useState('');
   const [formGender, setFormGender] = useState<'Male' | 'Female'>('Male');
-  const [formClass, setFormClass] = useState<StudentClass>('Class 1');
+  const [formClass, setFormClass] = useState<StudentClass>('Primary 1');
   const [formStream, setFormStream] = useState<SSSStream | undefined>(undefined);
+  const [formUniversityProgram, setFormUniversityProgram] = useState<UniversityProgram>('Diploma');
   const [formSection, setFormSection] = useState('');
   const [formParentName, setFormParentName] = useState('');
   const [formParentPhone, setFormParentPhone] = useState('');
@@ -248,6 +252,7 @@ export default function StudentList({
     setFormGender(student.gender);
     setFormClass(student.currentClass);
     setFormStream(student.stream);
+    setFormUniversityProgram(student.universityProgram || 'Diploma');
     setFormSection(student.classSection || '');
     setFormParentName(student.parentName);
     setFormParentPhone(student.parentPhone);
@@ -274,8 +279,9 @@ export default function StudentList({
     setFormName('');
     setFormDob('');
     setFormGender('Male');
-    setFormClass('Class 1');
+    setFormClass('Primary 1');
     setFormStream(undefined);
+    setFormUniversityProgram('Diploma');
     setFormSection('A');
     setFormParentName('');
     setFormParentPhone('');
@@ -302,6 +308,11 @@ export default function StudentList({
       return;
     }
 
+    if (formClass.startsWith('University') && !formUniversityProgram) {
+      alert('For university enrollment, the student must offer either Certificate or Diploma.');
+      return;
+    }
+
     if (editingStudent) {
       // Update
       const isNowVerified = canVerify ? formVerified : (editingStudent.verified || false);
@@ -312,6 +323,7 @@ export default function StudentList({
         gender: formGender,
         currentClass: formClass,
         stream: formClass.startsWith('SSS') ? (formStream || 'Science') : undefined,
+        universityProgram: formClass.startsWith('University') ? (formUniversityProgram || 'Diploma') : undefined,
         classSection: formSection || 'A',
         parentName: formParentName,
         parentPhone: formParentPhone,
@@ -342,6 +354,7 @@ export default function StudentList({
         gender: formGender,
         currentClass: formClass,
         stream: formClass.startsWith('SSS') ? (formStream || 'Science') : undefined,
+        universityProgram: formClass.startsWith('University') ? (formUniversityProgram || 'Diploma') : undefined,
         classSection: formSection || 'A',
         parentName: formParentName,
         parentPhone: formParentPhone,
@@ -368,12 +381,14 @@ export default function StudentList({
   // Count of active filters
   const activeFiltersCount = (selectedClass !== 'All' ? 1 : 0) +
                              (selectedStream !== 'All' ? 1 : 0) +
+                             (selectedProgram !== 'All' ? 1 : 0) +
                              (selectedGender !== 'All' ? 1 : 0) +
                              (selectedStatus !== 'All' ? 1 : 0);
 
   const resetAllFilters = () => {
     setSelectedClass('All');
     setSelectedStream('All');
+    setSelectedProgram('All');
     setSelectedGender('All');
     setSelectedStatus('All');
     setSearch('');
@@ -386,10 +401,12 @@ export default function StudentList({
     const matchesClass = selectedClass === 'All' || student.currentClass === selectedClass;
     const matchesStream = selectedStream === 'All' || 
                           (student.currentClass.startsWith('SSS') && student.stream === selectedStream);
+    const matchesProgram = selectedProgram === 'All' || 
+                          (student.currentClass.startsWith('University') && student.universityProgram === selectedProgram);
     const matchesGender = selectedGender === 'All' || student.gender === selectedGender;
     const matchesStatus = selectedStatus === 'All' || student.status === selectedStatus;
     
-    return matchesSearch && matchesClass && matchesStream && matchesGender && matchesStatus;
+    return matchesSearch && matchesClass && matchesStream && matchesProgram && matchesGender && matchesStatus;
   });
 
   return (
@@ -597,6 +614,24 @@ export default function StudentList({
                       </div>
                     )}
 
+                    {/* If University or All: Program Award (Certificate vs Diploma) */}
+                    {(selectedClass === 'All' || selectedClass.startsWith('University')) && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                          University Program
+                        </label>
+                        <select
+                          value={selectedProgram}
+                          onChange={(e) => setSelectedProgram(e.target.value as UniversityProgram | 'All')}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        >
+                          <option value="All">All Programs (Certificate & Diploma)</option>
+                          <option value="Certificate">Certificate Program</option>
+                          <option value="Diploma">Diploma Program</option>
+                        </select>
+                      </div>
+                    )}
+
                     {/* Filter Option 2: Gender */}
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
@@ -773,6 +808,15 @@ export default function StudentList({
                 </span>
               )}
 
+              {selectedProgram !== 'All' && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 font-semibold border border-emerald-100">
+                  Program: {selectedProgram}
+                  <button onClick={() => setSelectedProgram('All')} className="hover:text-emerald-900 cursor-pointer ml-0.5">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
               <button
                 type="button"
                 onClick={resetAllFilters}
@@ -845,7 +889,13 @@ export default function StudentList({
                       <span className="text-xs font-semibold px-2 py-1 rounded bg-slate-50 text-slate-600 border border-slate-100">
                         {student.currentClass}
                       </span>
-                      {student.stream && (
+                      {student.universityProgram && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 mt-1 uppercase tracking-wider">
+                          <Award className="w-2.5 h-2.5 text-emerald-600" />
+                          {student.universityProgram}
+                        </span>
+                      )}
+                      {student.stream && !student.universityProgram && (
                         <span className="text-[9px] font-medium text-indigo-600 mt-1 uppercase tracking-wider">
                           {student.stream}
                         </span>
@@ -1403,6 +1453,57 @@ export default function StudentList({
                         </div>
                       )}
 
+                      {/* University Program Offer: Certificate or Diploma (MANDATORY FOR UNIVERSITY) */}
+                      {formClass.startsWith('University') && (
+                        <div className="sm:col-span-2 bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-200/80 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                              <GraduationCap className="w-4 h-4 text-indigo-600" />
+                              University Program Offer <span className="text-rose-500">*</span>
+                            </label>
+                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-md">
+                              Certificate or Diploma
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-600">
+                            Select the university qualification program for this student (Certificate or Diploma required):
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            {UNIVERSITY_PROGRAMS.map(prog => (
+                              <button
+                                key={prog.id}
+                                type="button"
+                                onClick={() => setFormUniversityProgram(prog.id)}
+                                className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                                  formUniversityProgram === prog.id
+                                    ? 'bg-white border-indigo-600 ring-2 ring-indigo-500/20 shadow-xs'
+                                    : 'bg-white/60 border-slate-200 hover:border-indigo-300 hover:bg-white text-slate-700'
+                                }`}
+                              >
+                                <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-0.5 shrink-0 ${
+                                  formUniversityProgram === prog.id
+                                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                                    : 'border-slate-300 bg-white'
+                                }`}>
+                                  {formUniversityProgram === prog.id && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                  )}
+                                </div>
+                                <div className="space-y-0.5">
+                                  <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                    <Award className="w-3.5 h-3.5 text-indigo-600" />
+                                    {prog.label}
+                                  </span>
+                                  <span className="text-[11px] text-slate-500 block leading-tight">
+                                    {prog.description}
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* If SSS or University, show Section / Department here */}
                       {(formClass.startsWith('SSS') || formClass.startsWith('University')) && (
                         <div className="space-y-1">
@@ -1766,7 +1867,15 @@ export default function StudentList({
                             <td className="py-2 px-3 font-mono font-bold text-indigo-600">{stud.admissionNumber}</td>
                             <td className="py-2 px-3 font-bold text-slate-900">{stud.name}</td>
                             <td className="py-2 px-3">
-                              {stud.currentClass} {stud.stream ? `(${stud.stream})` : ''}
+                              <span className="font-semibold text-slate-800">{stud.currentClass}</span>
+                              {stud.universityProgram && (
+                                <span className="ml-1.5 text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase">
+                                  {stud.universityProgram}
+                                </span>
+                              )}
+                              {stud.stream && !stud.universityProgram && (
+                                <span className="ml-1 text-slate-500 text-[10px]">({stud.stream})</span>
+                              )}
                             </td>
                             <td className="py-2 px-3 text-slate-500">{stud.gender}</td>
                             <td className="py-2 px-3 text-center">
