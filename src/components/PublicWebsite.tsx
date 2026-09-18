@@ -20,6 +20,8 @@ import FacilitiesPage from './website/pages/FacilitiesPage';
 import NoticesPage from './website/pages/NoticesPage';
 import AdmissionsPage from './website/pages/AdmissionsPage';
 import ContactPage from './website/pages/ContactPage';
+import NewsPage from './website/pages/NewsPage';
+import GalleryPage from './website/pages/GalleryPage';
 import PortalLoginPage from './website/pages/PortalLoginPage';
 
 interface PublicWebsiteProps {
@@ -108,6 +110,14 @@ export default function PublicWebsite({ onEnterPortal, students = [] }: PublicWe
               <NoticesPage 
                 notices={notices}
               />
+            )}
+
+            {currentPage === 'news' && (
+              <NewsPage />
+            )}
+
+            {currentPage === 'gallery' && (
+              <GalleryPage />
             )}
 
             {currentPage === 'admissions' && (

@@ -31,6 +31,8 @@ export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0
 
   const NAV_ITEMS = [
     { id: 'home', label: 'Home' },
+    { id: 'news', label: 'School News' },
+    { id: 'gallery', label: 'Events Gallery' },
     { id: 'about', label: 'About & Leadership' },
     { id: 'academics', label: 'Academics & College' },
     { id: 'notices', label: 'Noticeboard & SMS', badge: noticeCount > 0 ? noticeCount : undefined },
