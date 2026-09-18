@@ -33,7 +33,10 @@ interface AuthContextType {
   resetInactivityTimer: () => void;
 }
 
-const BOOTSTRAPPED_ADMIN_EMAIL = 'nabieumelissajosephine@gmail.com';
+const BOOTSTRAPPED_ADMIN_EMAILS = [
+  'jaahwix@gmail.com',
+  'nabieumelissajosephine@gmail.com'
+];
 const INACTIVITY_TIMEOUT_SECONDS = 60; // 1 minute inactivity timeout
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,9 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // Determine role: bootstrapped admin email gets 'admin'
+        // Determine role: bootstrapped admin emails get 'admin'
         let assignedRole: UserRole = 'teacher';
-        if (firebaseUser.email?.toLowerCase() === BOOTSTRAPPED_ADMIN_EMAIL.toLowerCase()) {
+        if (firebaseUser.email && BOOTSTRAPPED_ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase())) {
           assignedRole = 'admin';
         } else {
           // Check local registry or Firestore

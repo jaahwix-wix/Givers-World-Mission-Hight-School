@@ -30,6 +30,7 @@ export const DATA_STORAGE_KEYS = [
   'sma_bus_assignments',
   'sma_daily_attendance',
   'sma_incidents',
+  'sma_fee_sms_dispatch_log',
 ] as const;
 
 export const LIVE_MODE_INDICATOR_KEY = 'sma_live_production_active';
@@ -63,6 +64,7 @@ export function wipeAllSystemData(): void {
   // Clear daily attendance logs and disciplinary incident reports
   localStorage.setItem('sma_daily_attendance', JSON.stringify([]));
   localStorage.setItem('sma_incidents', JSON.stringify([]));
+  localStorage.setItem('sma_fee_sms_dispatch_log', JSON.stringify([]));
 
   // Mark live production status
   localStorage.setItem(LIVE_MODE_INDICATOR_KEY, 'true');

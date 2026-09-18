@@ -29,10 +29,9 @@ export function useNotifications({ students, fees }: UseNotificationsProps) {
       if (stored) {
         return JSON.parse(stored);
       }
-      const isLive = localStorage.getItem(LIVE_MODE_INDICATOR_KEY) === 'true';
-      return isLive ? [] : DEFAULT_SCHOOL_ANNOUNCEMENTS;
+      return [];
     } catch {
-      return DEFAULT_SCHOOL_ANNOUNCEMENTS;
+      return [];
     }
   });
 
@@ -41,12 +40,11 @@ export function useNotifications({ students, fees }: UseNotificationsProps) {
       const stored = localStorage.getItem('sma_assignments');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.length > 0) return parsed;
+        if (parsed && Array.isArray(parsed)) return parsed;
       }
-      const isLive = localStorage.getItem(LIVE_MODE_INDICATOR_KEY) === 'true';
-      return isLive ? [] : DEFAULT_SAMPLE_ASSIGNMENTS;
+      return [];
     } catch {
-      return DEFAULT_SAMPLE_ASSIGNMENTS;
+      return [];
     }
   });
 
@@ -55,12 +53,11 @@ export function useNotifications({ students, fees }: UseNotificationsProps) {
       const stored = localStorage.getItem('sma_submissions');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.length > 0) return parsed;
+        if (parsed && Array.isArray(parsed)) return parsed;
       }
-      const isLive = localStorage.getItem(LIVE_MODE_INDICATOR_KEY) === 'true';
-      return isLive ? [] : DEFAULT_SAMPLE_SUBMISSIONS;
+      return [];
     } catch {
-      return DEFAULT_SAMPLE_SUBMISSIONS;
+      return [];
     }
   });
 

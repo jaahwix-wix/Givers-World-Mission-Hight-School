@@ -161,7 +161,7 @@ export default function App() {
 
   // 1. Initial Load: Sync with LocalStorage or set clean live production state
   useEffect(() => {
-    const GO_LIVE_VERSION_KEY = 'sma_live_go_live_cleared_v2';
+    const GO_LIVE_VERSION_KEY = 'sma_live_go_live_cleared_v5';
 
     // If migrating to live production, wipe all previous mock/demo data
     if (localStorage.getItem(GO_LIVE_VERSION_KEY) !== 'true') {

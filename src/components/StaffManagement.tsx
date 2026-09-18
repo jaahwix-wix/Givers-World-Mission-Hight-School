@@ -112,15 +112,15 @@ export default function StaffManagement({ students, onNavigate }: StaffManagemen
       const cachedAssignments = localStorage.getItem('sma_assignments');
       const cachedSubmissions = localStorage.getItem('sma_submissions');
 
-      let loadedTeachers = DEFAULT_SAMPLE_TEACHERS;
+      let loadedTeachers: Teacher[] = [];
       if (cachedTeachers) {
         try {
           loadedTeachers = JSON.parse(cachedTeachers);
         } catch {
-          loadedTeachers = DEFAULT_SAMPLE_TEACHERS;
+          loadedTeachers = [];
         }
       } else {
-        localStorage.setItem('sma_teachers', JSON.stringify(DEFAULT_SAMPLE_TEACHERS));
+        localStorage.setItem('sma_teachers', JSON.stringify([]));
       }
       setTeachers(loadedTeachers);
 
@@ -128,27 +128,27 @@ export default function StaffManagement({ students, onNavigate }: StaffManagemen
         setSelectedTeacherId(loadedTeachers[0].id);
       }
 
-      let loadedAssignments = DEFAULT_SAMPLE_ASSIGNMENTS;
+      let loadedAssignments: Assignment[] = [];
       if (cachedAssignments) {
         try {
           loadedAssignments = JSON.parse(cachedAssignments);
         } catch {
-          loadedAssignments = DEFAULT_SAMPLE_ASSIGNMENTS;
+          loadedAssignments = [];
         }
       } else {
-        localStorage.setItem('sma_assignments', JSON.stringify(DEFAULT_SAMPLE_ASSIGNMENTS));
+        localStorage.setItem('sma_assignments', JSON.stringify([]));
       }
       setAssignments(loadedAssignments);
 
-      let loadedSubmissions = DEFAULT_SAMPLE_SUBMISSIONS;
+      let loadedSubmissions: Submission[] = [];
       if (cachedSubmissions) {
         try {
           loadedSubmissions = JSON.parse(cachedSubmissions);
         } catch {
-          loadedSubmissions = DEFAULT_SAMPLE_SUBMISSIONS;
+          loadedSubmissions = [];
         }
       } else {
-        localStorage.setItem('sma_submissions', JSON.stringify(DEFAULT_SAMPLE_SUBMISSIONS));
+        localStorage.setItem('sma_submissions', JSON.stringify([]));
       }
       setSubmissions(loadedSubmissions);
     };

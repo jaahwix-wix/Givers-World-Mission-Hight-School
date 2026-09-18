@@ -60,10 +60,10 @@ export default function IdCardCenter({ students, onNavigate, initialSelection }:
       try {
         return JSON.parse(cached);
       } catch {
-        return DEFAULT_SAMPLE_TEACHERS;
+        return [];
       }
     }
-    return DEFAULT_SAMPLE_TEACHERS;
+    return [];
   });
 
   // Search and Filter states

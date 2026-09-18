@@ -18,7 +18,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Student, Teacher } from '../types';
-import { DEFAULT_SAMPLE_TEACHERS, SCHOOL_INFO } from '../initialData';
+import { SCHOOL_INFO } from '../initialData';
 
 interface VerificationQueueProps {
   students: Student[];
@@ -36,7 +36,7 @@ export default function VerificationQueue({ students, onUpdateStudent, onNavigat
         console.error('Failed to parse teachers', e);
       }
     }
-    return DEFAULT_SAMPLE_TEACHERS;
+    return [];
   });
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'students' | 'staff'>('all');
