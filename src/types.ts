@@ -263,3 +263,44 @@ export interface FeeSmsAlertRecord {
   channel: 'SMS' | 'WhatsApp';
 }
 
+export interface ClassNotice {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  authorRole: 'admin' | 'teacher';
+  authorEmail?: string;
+  targetClass: StudentClass | 'All Classes';
+  priority: 'Urgent Executive Order' | 'Official Directive' | 'High Priority' | 'Standard Academic Notice';
+  category: 'Academic' | 'Exam Preparation' | 'Discipline' | 'Attendance' | 'Event' | 'General' | 'Tuition';
+  isPinned?: boolean;
+  createdAt: string;
+  date: string;
+  smsBroadcast: {
+    totalRecipients: number;
+    studentCount: number;
+    parentCount: number;
+    deliveredCount: number;
+    status: 'Delivered' | 'Broadcasting' | 'Failed';
+    sentAt: string;
+    carrier: string;
+  };
+}
+
+export interface NoticeSmsLog {
+  id: string;
+  noticeId: string;
+  noticeTitle: string;
+  studentId: string;
+  studentName: string;
+  currentClass: StudentClass;
+  recipientType: 'Student' | 'Parent/Guardian';
+  recipientName: string;
+  phoneNumber: string;
+  messageText: string;
+  carrier: string;
+  status: 'Delivered' | 'Transmitted' | 'Pending';
+  timestamp: string;
+}
+
+

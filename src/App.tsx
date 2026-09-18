@@ -22,7 +22,9 @@ import {
   Shield,
   Lock,
   Key,
-  IdCard
+  IdCard,
+  BellRing,
+  Globe
 } from 'lucide-react';
 import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger, FeeTransaction } from './types';
 import { 
@@ -50,6 +52,8 @@ import BusManagement from './components/BusManagement';
 import StaffManagement from './components/StaffManagement';
 import Library from './components/Library';
 import IdCardCenter from './components/IdCardCenter';
+import NoticeManagement from './components/NoticeManagement';
+import PublicWebsite from './components/PublicWebsite';
 import GlobalHeader from './components/GlobalHeader';
 import PrivilegesModal from './components/PrivilegesModal';
 import AccessRestricted from './components/AccessRestricted';
@@ -84,6 +88,7 @@ export default function App() {
   }, [theme]);
 
   // Navigation State
+  const [viewMode, setViewMode] = useState<'website' | 'portal'>('website');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [navigationArgs, setNavigationArgs] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -97,6 +102,7 @@ export default function App() {
   // Navigation Links definition with RBAC permissions
   const NAV_LINKS = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'canViewDashboard' as const, moduleName: 'Executive Dashboard', requiredDesc: 'Dashboard & KPI viewing permission' },
+    { id: 'notices', label: 'Noticeboard & SMS', icon: BellRing, permission: 'canViewStudents' as const, moduleName: 'Noticeboard & SMS Dispatch Center', requiredDesc: 'Publish notices and audit class SMS broadcasts' },
     { id: 'students', label: 'Student Files', icon: Users, permission: 'canViewStudents' as const, moduleName: 'Student Records', requiredDesc: 'Student registry access' },
     { id: 'id-cards', label: 'ID Cards & Badges', icon: IdCard, permission: 'canViewStudents' as const, moduleName: 'ID Card & Credential Center', requiredDesc: 'Student & Staff identification badge management' },
     { id: 'performance', label: 'Academic Portal', icon: Award, permission: 'canViewAcademics' as const, moduleName: 'Academic Portal', requiredDesc: 'Academic grading & terminal performance access' },
@@ -374,6 +380,30 @@ export default function App() {
     else setActiveTab('dashboard');
   };
 
+  // Render Public Website Mode
+  if (viewMode === 'website') {
+    return (
+      <div className="min-h-screen bg-slate-50 font-sans" id="main-public-website-view">
+        <PublicWebsite 
+          onEnterPortal={(targetTab) => {
+            if (targetTab) setActiveTab(targetTab);
+            setViewMode('portal');
+          }}
+          students={students}
+        />
+
+        {/* Privileges & Authentication Modal */}
+        <PrivilegesModal 
+          isOpen={isPrivilegesModalOpen}
+          onClose={() => setIsPrivilegesModalOpen(false)}
+        />
+
+        {/* Inactivity Session Lock & Login Gate */}
+        <SessionLoginGate />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row font-sans text-slate-800 dark:text-slate-100 transition-colors duration-200" id="main-app-container">
       
@@ -407,6 +437,17 @@ export default function App() {
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-400" />}
             </button>
           </div>
+
+          {/* Return to Public Website Button */}
+          <button
+            type="button"
+            onClick={() => setViewMode('website')}
+            className="w-full mt-3 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-xs transition-all cursor-pointer"
+            id="sidebar-back-to-website-btn"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span>Public School Website</span>
+          </button>
         </div>
 
         {/* Sidebar Navigation Links */}
@@ -574,6 +615,17 @@ export default function App() {
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false);
+                  setViewMode('website');
+                }}
+                className="w-full py-2.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <Globe className="w-4 h-4" />
+                <span>Return to Public Website</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
                   setIsPrivilegesModalOpen(true);
                 }}
                 className="w-full py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm"
@@ -600,6 +652,7 @@ export default function App() {
           activeTab={activeTab}
           onNavigate={handleNavigate}
           onOpenPrivileges={() => setIsPrivilegesModalOpen(true)}
+          onNavigateToWebsite={() => setViewMode('website')}
         />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8" id="workspace-viewport">
@@ -621,6 +674,12 @@ export default function App() {
                   fees={fees} 
                   onNavigate={handleNavigate}
                   onUpdateStudent={handleUpdateStudent}
+                />
+              )}
+
+              {activeTab === 'notices' && (
+                <NoticeManagement 
+                  students={students}
                 />
               )}
 

@@ -13,13 +13,17 @@ import {
   Save, 
   Sparkles,
   Calendar,
-  UserCheck
+  UserCheck,
+  Smartphone,
+  Send
 } from 'lucide-react';
-import { PrincipalsNotice } from '../types';
+import { PrincipalsNotice, StudentClass, ClassNotice } from '../types';
 import { SCHOOL_INFO } from '../initialData';
+import { CLASSES_LIST } from '../constants';
 import { useAuth } from '../context/AuthContext';
+import { broadcastNoticeSMS } from '../utils/smsNoticeUtils';
 
-export const DEFAULT_PRINCIPALS_NOTICE: PrincipalsNotice = {
+export const DEFAULT_PRINCIPALS_NOTICE: PrincipalsNotice & { targetClass?: string; smsSentCount?: number } = {
   id: 'pn-est-001',
   title: 'Term 3 Executive Directive: WASSCE Candidate Clearance, CA Registers & Terminal Tuition',
   content: 'All academic staff are instructed to finalize and submit terminal Continuous Assessment (CA) registers to the Vice Principal. Mandatory weekend revision clinics for NPSE, BECE, and WASSCE candidates are active every Saturday at 8:30 AM. Parents and guardians must settle outstanding tuition dues with the Bursary office before official terminal examination seat cards are issued.',
@@ -29,7 +33,9 @@ export const DEFAULT_PRINCIPALS_NOTICE: PrincipalsNotice = {
   isPinned: true,
   priority: 'Official Directive',
   category: 'Executive Administration',
-  lastUpdated: new Date().toISOString().split('T')[0]
+  lastUpdated: new Date().toISOString().split('T')[0],
+  targetClass: 'All Classes',
+  smsSentCount: 96
 };
 
 interface PrincipalsNoticeBannerProps {
@@ -40,7 +46,7 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
   const { role, can } = useAuth();
   const canEditNotice = can('canVerifyStaffAndStudents') || role === 'admin';
 
-  const [notice, setNotice] = useState<PrincipalsNotice>(() => {
+  const [notice, setNotice] = useState<PrincipalsNotice & { targetClass?: string; smsSentCount?: number }>(() => {
     const cached = localStorage.getItem('sma_principal_pinned_notice');
     if (cached) {
       try {
@@ -57,6 +63,7 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
   const [formContent, setFormContent] = useState(notice.content);
   const [formPriority, setFormPriority] = useState<PrincipalsNotice['priority']>(notice.priority);
   const [formCategory, setFormCategory] = useState(notice.category);
+  const [formTargetClass, setFormTargetClass] = useState<string>(notice.targetClass || 'All Classes');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Synchronize across components
@@ -85,6 +92,7 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
     setFormContent(notice.content);
     setFormPriority(notice.priority);
     setFormCategory(notice.category);
+    setFormTargetClass(notice.targetClass || 'All Classes');
     setIsEditing(true);
   };
 
@@ -92,12 +100,50 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
     e.preventDefault();
     if (!formTitle.trim() || !formContent.trim()) return;
 
-    const updated: PrincipalsNotice = {
+    // Retrieve active students from storage
+    let currentStudents: any[] = [];
+    try {
+      const s = localStorage.getItem('sma_students');
+      if (s) currentStudents = JSON.parse(s);
+    } catch (err) {
+      console.warn(err);
+    }
+
+    // Trigger automated SMS broadcast to all students and parents in target class
+    const noticeToBroadcast: ClassNotice = {
+      id: `pn-broadcast-${Date.now()}`,
+      title: formTitle.trim(),
+      content: formContent.trim(),
+      author: SCHOOL_INFO.principalName,
+      authorRole: 'admin',
+      authorEmail: 'principal.givers@school.edu.sl',
+      targetClass: formTargetClass as any,
+      priority: formPriority as any,
+      category: 'General',
+      isPinned: true,
+      createdAt: new Date().toISOString(),
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      smsBroadcast: {
+        totalRecipients: 0,
+        studentCount: 0,
+        parentCount: 0,
+        deliveredCount: 0,
+        status: 'Broadcasting',
+        sentAt: 'Sending...',
+        carrier: 'Sierra Leone GSM Gateway'
+      }
+    };
+
+    const smsResult = broadcastNoticeSMS(noticeToBroadcast, currentStudents);
+
+    const updated = {
       ...notice,
       title: formTitle.trim(),
       content: formContent.trim(),
       priority: formPriority,
       category: formCategory.trim() || 'Executive Directive',
+      targetClass: formTargetClass,
+      smsSentCount: smsResult.totalSent,
       author: SCHOOL_INFO.principalName,
       role: 'CEO & Principal',
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -111,9 +157,10 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
     window.dispatchEvent(new Event('storage'));
     setIsEditing(false);
 
-    setToastMessage('Principal announcement updated and pinned across all portals.');
-    setTimeout(() => setToastMessage(null), 3500);
+    setToastMessage(`Directive updated & ${smsResult.totalSent} SMS broadcasted to students & parents in ${formTargetClass}!`);
+    setTimeout(() => setToastMessage(null), 4500);
   };
+
 
   return (
     <div className="relative" id="principals-notice-banner-container">
@@ -178,7 +225,7 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
           </p>
         </div>
 
-        {/* Notice Footer with Verification Stamp */}
+        {/* Notice Footer with Verification Stamp & SMS Broadcast Badge */}
         <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-900 flex items-center justify-center font-black text-[10px]">
@@ -189,9 +236,16 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
             </span>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] text-amber-300/80">
-            <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Visible to all Staff, Teachers, and Student Portals</span>
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold">
+              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+              <span>SMS Dispatched to Students & Parents ({notice.targetClass || 'All Classes'})</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-[11px] text-amber-300/80">
+              <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Visible to All Portals</span>
+            </div>
           </div>
         </div>
       </div>
@@ -207,7 +261,7 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm sm:text-base text-white">Principal's Pinned Announcement</h3>
-                  <p className="text-xs text-amber-300">Evangelist Saint Turay (CEO/Principal Executive Dispatch)</p>
+                  <p className="text-xs text-amber-300">Evangelist Saint Turay (CEO/Principal Executive Dispatch with SMS)</p>
                 </div>
               </div>
               <button
@@ -220,6 +274,24 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
             </div>
 
             <form onSubmit={handleSaveNotice} className="p-5 space-y-4">
+              {/* Target Class Selection for SMS */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>Target Class for Notice & Automated SMS</span>
+                  <span className="text-[11px] text-amber-700 font-extrabold">Sends SMS to every pupil & parent</span>
+                </label>
+                <select
+                  value={formTargetClass}
+                  onChange={(e) => setFormTargetClass(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                >
+                  <option value="All Classes">All Classes (Entire School-Wide Broadcast)</option>
+                  {CLASSES_LIST.map((c) => (
+                    <option key={c} value={c}>Class: {c}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700">Notice Headline / Title</label>
                 <input
@@ -270,10 +342,10 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
                 />
               </div>
 
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
-                <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 flex items-start gap-2">
+                <Smartphone className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <p>
-                  This announcement will pin at the top of the Executive Dashboard, Staff Management hub, and Student Portal with Evangelist Saint Turay's digital seal.
+                  <strong>Automated SMS Broadcast:</strong> Upon saving, the system will automatically send individual SMS alerts to all students and parents in <strong>{formTargetClass}</strong> via Orange SL & Africell GSM gateway.
                 </p>
               </div>
 
@@ -289,8 +361,8 @@ export default function PrincipalsNoticeBanner({ variant = 'dashboard' }: Princi
                   type="submit"
                   className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
                 >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Publish & Pin Directive</span>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Publish & Broadcast SMS</span>
                 </button>
               </div>
             </form>

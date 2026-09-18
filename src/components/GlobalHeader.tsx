@@ -20,7 +20,8 @@ import {
   Clock,
   IdCard,
   Copy,
-  Check
+  Check,
+  Globe
 } from 'lucide-react';
 import { Student, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
@@ -34,9 +35,10 @@ interface GlobalHeaderProps {
   activeTab: string;
   onNavigate: (tab: string, arg?: any) => void;
   onOpenPrivileges: () => void;
+  onNavigateToWebsite?: () => void;
 }
 
-export default function GlobalHeader({ students, fees, activeTab, onNavigate, onOpenPrivileges }: GlobalHeaderProps) {
+export default function GlobalHeader({ students, fees, activeTab, onNavigate, onOpenPrivileges, onNavigateToWebsite }: GlobalHeaderProps) {
   const { user, role, privileges, isFirebaseOnline, lockSession, secondsRemaining } = useAuth();
   const { alerts, unreadCount, markAsRead, markAllAsRead, addAnnouncement } = useNotifications({ students, fees });
   const [searchQuery, setSearchQuery] = useState('');
@@ -340,6 +342,20 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate, on
           onNavigate={onNavigate}
           onAddAnnouncement={addAnnouncement}
         />
+
+        {/* Public Website Switcher */}
+        {onNavigateToWebsite && (
+          <button
+            type="button"
+            onClick={onNavigateToWebsite}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs shadow-xs transition-colors cursor-pointer"
+            title="View the public school website & noticeboard"
+            id="global-header-view-website-btn"
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Public Website</span>
+          </button>
+        )}
 
         {/* Role & Privileges Trigger */}
         <button
