@@ -368,7 +368,7 @@ export default function IdCardCenter({ students, onNavigate, initialSelection }:
             <img 
               src={SCHOOL_INFO.logo} 
               alt="Crest" 
-              className="w-10 h-10 rounded-full object-cover border-2 border-amber-400/80 shadow-xs shrink-0 bg-white" 
+              className="w-10 h-10 rounded-full object-contain p-0.5 border-2 border-amber-400/80 shadow-xs shrink-0 bg-white" 
             />
             <div className="min-w-0 flex-1">
               <h3 className="font-extrabold text-[12px] leading-tight tracking-wide text-white uppercase truncate">
