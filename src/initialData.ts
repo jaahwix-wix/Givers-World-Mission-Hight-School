@@ -17,12 +17,12 @@ import {
 import schoolLogo from './assets/logo.jpg';
 
 export const SCHOOL_INFO = {
-  name: 'Givers World Mission Diplomats Academy',
+  name: 'Givers World Mission Diplomats Academy & College',
   shortName: 'G.W.D.A',
-  systemName: 'Givers World Mission Diplomats Academy MIS',
+  systemName: 'Givers World Mission Diplomats Academy & College MIS',
   motto: 'Eagles Squad',
   slogan: 'Eagles Squad',
-  address: 'Kambia 2, Northern Province, Kambia, Sierra Leone',
+  address: 'Kambia 1, Northern Province, Sierra Leone',
   phone: '034 055410',
   email: 'info@giversworldmission.edu.sl',
   website: 'https://givers-world-mission-high-school.vercel.app/',

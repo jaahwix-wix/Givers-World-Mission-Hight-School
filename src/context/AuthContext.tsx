@@ -31,6 +31,8 @@ interface AuthContextType {
   lockSession: () => void;
   unlockSession: (role?: UserRole) => void;
   resetInactivityTimer: () => void;
+  isPortalActive: boolean;
+  setPortalActive: (active: boolean) => void;
 }
 
 const BOOTSTRAPPED_ADMIN_EMAILS = [
@@ -166,14 +168,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Inactivity & Session Lock State
-  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(() => {
-    return sessionStorage.getItem('sma_session_locked') === 'true';
-  });
+  // Portal Active State (public website vs management portal)
+  const [isPortalActive, setIsPortalActive] = useState<boolean>(false);
+
+  // Inactivity & Session Lock State - always unlocked by default for public visitors
+  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number>(INACTIVITY_TIMEOUT_SECONDS);
   const lastActivityRef = useRef<number>(Date.now());
 
-  // Function to lock session
+  // Ensure public visitors start with clean unlocked session on fresh loads
+  useEffect(() => {
+    sessionStorage.removeItem('sma_session_locked');
+  }, []);
+
+  // Function to lock session (only applicable when in portal)
   const lockSession = useCallback(() => {
     setIsSessionLocked(true);
     sessionStorage.setItem('sma_session_locked', 'true');
@@ -209,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [isSessionLocked]);
 
-  // Global Inactivity Event Listeners (1 minute timeout)
+  // Global Inactivity Event Listeners (only locks if user is actively in the portal)
   useEffect(() => {
     const handleUserActivity = () => {
       if (isSessionLocked) return;
@@ -227,6 +235,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Inactivity countdown & lock trigger interval (every 1 second)
     const interval = setInterval(() => {
+      // If browsing public website, never lock session!
+      if (!isPortalActive) {
+        if (isSessionLocked) setIsSessionLocked(false);
+        setSecondsRemaining(INACTIVITY_TIMEOUT_SECONDS);
+        return;
+      }
+
       if (isSessionLocked) {
         setSecondsRemaining(0);
         return;
@@ -237,7 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const remaining = Math.max(0, INACTIVITY_TIMEOUT_SECONDS - elapsedSeconds);
       setSecondsRemaining(remaining);
 
-      // Trigger automatic session lock when 1 minute of inactivity elapses
+      // Trigger automatic session lock when 1 minute of inactivity elapses inside portal
       if (remaining <= 0) {
         setIsSessionLocked(true);
         sessionStorage.setItem('sma_session_locked', 'true');
@@ -250,19 +265,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       clearInterval(interval);
     };
-  }, [isSessionLocked]);
+  }, [isSessionLocked, isPortalActive]);
 
   // Sign Out
   const signOutUser = async () => {
     try {
       setIsLoading(true);
       await firebaseSignOut(auth);
-      // Reset to default guest admin demo for testing and lock session
+      // Reset to default guest admin demo for testing and unlock session
       setUser(DEMO_PRESET_USERS.admin);
       localStorage.removeItem('sma_active_role');
-      setIsSessionLocked(true);
-      sessionStorage.setItem('sma_session_locked', 'true');
-      setSecondsRemaining(0);
+      setIsSessionLocked(false);
+      setIsPortalActive(false);
+      sessionStorage.removeItem('sma_session_locked');
+      setSecondsRemaining(INACTIVITY_TIMEOUT_SECONDS);
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -329,6 +345,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lockSession,
         unlockSession,
         resetInactivityTimer,
+        isPortalActive,
+        setPortalActive: setIsPortalActive,
       }}
     >
       {children}

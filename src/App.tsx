@@ -67,7 +67,7 @@ export { getPendingFeeStudents };
 export type { PendingFeeStudent };
 
 export default function App() {
-  const { user, role, privileges, can, isFirebaseOnline } = useAuth();
+  const { user, role, privileges, can, isFirebaseOnline, setPortalActive, unlockSession } = useAuth();
   const [isPrivilegesModalOpen, setIsPrivilegesModalOpen] = useState(false);
 
   // Theme State
@@ -87,11 +87,21 @@ export default function App() {
     localStorage.setItem('sma_theme', theme);
   }, [theme]);
 
-  // Navigation State
+  // Navigation State - Always defaults to open public website (no login/pin required)
   const [viewMode, setViewMode] = useState<'website' | 'portal'>('website');
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [navigationArgs, setNavigationArgs] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Ensure public website mode is never locked and starts clean
+  useEffect(() => {
+    if (viewMode === 'website') {
+      setPortalActive(false);
+      unlockSession();
+    } else {
+      setPortalActive(true);
+    }
+  }, [viewMode, setPortalActive, unlockSession]);
 
   // Core Database States
   const [students, setStudents] = useState<Student[]>([]);
@@ -380,13 +390,14 @@ export default function App() {
     else setActiveTab('dashboard');
   };
 
-  // Render Public Website Mode
+  // Render Public Website Mode - Open access with no password or PIN
   if (viewMode === 'website') {
     return (
       <div className="min-h-screen bg-slate-50 font-sans" id="main-public-website-view">
         <PublicWebsite 
           onEnterPortal={(targetTab) => {
             if (targetTab) setActiveTab(targetTab);
+            setPortalActive(true);
             setViewMode('portal');
           }}
           students={students}
@@ -397,9 +408,6 @@ export default function App() {
           isOpen={isPrivilegesModalOpen}
           onClose={() => setIsPrivilegesModalOpen(false)}
         />
-
-        {/* Inactivity Session Lock & Login Gate */}
-        <SessionLoginGate />
       </div>
     );
   }
@@ -784,8 +792,14 @@ export default function App() {
         onClose={() => setIsPrivilegesModalOpen(false)}
       />
 
-      {/* Inactivity Session Lock & Login Gate (1-Minute Inactivity Timeout) */}
-      <SessionLoginGate />
+      {/* Inactivity Session Lock & Login Gate (Portal Only - user can always exit to public website) */}
+      <SessionLoginGate 
+        onReturnToWebsite={() => {
+          setPortalActive(false);
+          unlockSession();
+          setViewMode('website');
+        }}
+      />
 
     </div>
   );

@@ -22,7 +22,8 @@ import {
   BookOpen, 
   Shield, 
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -30,7 +31,11 @@ import { UserRole } from '../types';
 import { SCHOOL_INFO } from '../initialData';
 import schoolLogo from '../assets/logo.jpg';
 
-export default function SessionLoginGate() {
+interface SessionLoginGateProps {
+  onReturnToWebsite?: () => void;
+}
+
+export default function SessionLoginGate({ onReturnToWebsite }: SessionLoginGateProps) {
   const { 
     user, 
     role, 
@@ -466,6 +471,23 @@ export default function SessionLoginGate() {
               <span>Authenticate with Google Account</span>
             </button>
           </div>
+
+          {/* Direct Return to Open Public Website */}
+          {onReturnToWebsite && (
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  unlockSession();
+                  onReturnToWebsite();
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 hover:text-amber-200 text-xs font-black transition-all cursor-pointer shadow-sm w-full justify-center"
+              >
+                <Globe className="w-4 h-4 text-amber-400" />
+                <span>Return to Public Website (No Password Required)</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Security Policy Footer */}
