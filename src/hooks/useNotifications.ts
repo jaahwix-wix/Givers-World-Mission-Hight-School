@@ -121,27 +121,48 @@ export function useNotifications({ students, fees }: UseNotificationsProps) {
       });
     });
 
-    // 2. PENDING FEE PAYMENTS
+    // 2. AUTOMATED PENDING FEE FLAGS & SMS ALERT SUMMARY
+    let pendingFeeCount = 0;
+    let totalPendingAmount = 0;
+
     fees.forEach((ledger) => {
       const student = students.find((s) => s.id === ledger.studentId);
-      if (!student) return;
+      if (!student || student.status !== 'Active') return;
 
-      // Check Term 3 (Active current term) and other terms
+      // Check Term 3 (Active current term)
       const term3 = ledger.terms?.[3];
       if (term3 && term3.status !== 'Paid' && term3.balance > 0) {
+        pendingFeeCount++;
+        totalPendingAmount += term3.balance;
+
         list.push({
           id: `fee-${student.id}-t3`,
           type: 'fee',
-          title: `Pending Fee: ${student.name}`,
-          description: `${student.name} (${student.currentClass}) has an outstanding balance of SLE ${term3.balance.toLocaleString()} for Term 3.`,
+          title: `Pending Fee Flag: ${student.name}`,
+          description: `${student.name} (${student.currentClass}) has an outstanding balance of SLE ${term3.balance.toLocaleString()} for Term 3. Guardian: ${student.parentName} (${student.parentPhone}).`,
           timestamp: 'Term 3 Active',
           priority: term3.status === 'Unpaid' ? 'urgent' : 'high',
           read: readIds.includes(`fee-${student.id}-t3`),
           linkTab: 'fees',
-          linkArgs: { studentId: student.id, search: student.name }
+          linkArgs: { studentId: student.id, search: student.name, openSmsModal: true, initialTerm: 3 }
         });
       }
     });
+
+    // Consolidated Automated Flag Notification
+    if (pendingFeeCount > 0) {
+      list.push({
+        id: 'fee-automated-sms-summary-t3',
+        type: 'fee',
+        title: `Automated Fee Alert: ${pendingFeeCount} Students Flagged`,
+        description: `Automated scan flagged ${pendingFeeCount} students with unpaid tuition balances totaling SLE ${totalPendingAmount.toLocaleString()}. Click to review summary and dispatch guardian SMS alerts.`,
+        timestamp: 'Automated Real-time',
+        priority: 'urgent',
+        read: readIds.includes('fee-automated-sms-summary-t3'),
+        linkTab: 'fees',
+        linkArgs: { openSmsModal: true, initialTerm: 3 }
+      });
+    }
 
     // 3. NEW ASSIGNMENT UPLOADS
     assignments.forEach((assign) => {

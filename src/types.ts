@@ -4,10 +4,14 @@
  */
 
 export type StudentClass =
-  | 'Prep 1' | 'Prep 2'
+  | 'Pre 1' | 'Pre 2' | 'Pre 3'
+  | 'Prep 1' | 'Prep 2' | 'Prep 3'
+  | 'Nursery 1' | 'Nursery 2' | 'Nursery 3'
   | 'Class 1' | 'Class 2' | 'Class 3' | 'Class 4' | 'Class 5' | 'Class 6'
   | 'JSS 1' | 'JSS 2' | 'JSS 3'
-  | 'SSS 1' | 'SSS 2' | 'SSS 3';
+  | 'SSS 1' | 'SSS 2' | 'SSS 3'
+  | 'University Year 1' | 'University Year 2' | 'University Year 3' | 'University Year 4'
+  | 'University';
 
 export type SSSStream = 'Science' | 'Arts' | 'Commercial' | 'General';
 
@@ -149,9 +153,14 @@ export interface AuthUser {
 
 export interface Teacher {
   id: string;
+  staffId?: string;
   name: string;
   email: string;
   phone: string;
+  roleTitle?: string;
+  department?: string;
+  bloodType?: string;
+  profileImage?: string;
   subjects: string[];
   classes: StudentClass[];
   salary: number;
@@ -231,5 +240,22 @@ export interface NotificationAlert {
   read: boolean;
   linkTab?: string;
   linkArgs?: any;
+}
+
+export interface FeeSmsAlertRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  currentClass: StudentClass;
+  guardianName: string;
+  guardianPhone: string;
+  term: number;
+  balance: number;
+  totalDue: number;
+  messageText: string;
+  sentAt: string;
+  status: 'Delivered' | 'Pending' | 'Failed';
+  channel: 'SMS' | 'WhatsApp';
 }
 

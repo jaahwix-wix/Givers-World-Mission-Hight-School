@@ -19,6 +19,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { Student, StudentClass } from '../types';
+import { CLASSES_LIST } from '../constants';
 
 interface StudentAttendancePanelProps {
   students: Student[];
@@ -200,13 +201,6 @@ export default function StudentAttendancePanel({ students }: StudentAttendancePa
     s.admissionNumber.toLowerCase().includes(searchStudentTerm.toLowerCase())
   );
 
-  const CLASSES: StudentClass[] = [
-    'Prep 1', 'Prep 2',
-    'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6',
-    'JSS 1', 'JSS 2', 'JSS 3',
-    'SSS 1', 'SSS 2', 'SSS 3'
-  ];
-
   // Helper for month formatting
   const getFormattedMonthName = () => {
     const [year, month] = currentYearMonth.split('-');
@@ -236,7 +230,7 @@ export default function StudentAttendancePanel({ students }: StudentAttendancePa
                 onChange={(e) => setSelectedClass(e.target.value as StudentClass)}
                 className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
               >
-                {CLASSES.map(cls => (
+                {CLASSES_LIST.map(cls => (
                   <option key={cls} value={cls}>{cls}</option>
                 ))}
               </select>

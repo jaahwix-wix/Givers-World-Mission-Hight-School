@@ -100,10 +100,12 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
   // GPA Distribution Data mapping for recharts
   const gpaData = useMemo(() => {
     const tiers = [
-      { name: 'Nursery', filter: (c: string) => c.startsWith('Prep') },
+      { name: 'Pre-School', filter: (c: string) => c.startsWith('Pre') || c.startsWith('Prep') },
+      { name: 'Nursery', filter: (c: string) => c.startsWith('Nursery') },
       { name: 'Primary', filter: (c: string) => c.startsWith('Class') },
       { name: 'JSS', filter: (c: string) => c.startsWith('JSS') },
       { name: 'SSS', filter: (c: string) => c.startsWith('SSS') },
+      { name: 'University', filter: (c: string) => c.startsWith('University') },
     ];
 
     return tiers.map(tier => {
@@ -390,17 +392,21 @@ CEO/Principal, Givers World Mission`;
 
   // Class distribution calculation
   const levelCounts = {
-    Nursery: activeStudents.filter(s => s.currentClass.startsWith('Prep')).length,
+    'Pre-School': activeStudents.filter(s => s.currentClass.startsWith('Pre') || s.currentClass.startsWith('Prep')).length,
+    Nursery: activeStudents.filter(s => s.currentClass.startsWith('Nursery')).length,
     Primary: activeStudents.filter(s => s.currentClass.startsWith('Class')).length,
     JSS: activeStudents.filter(s => s.currentClass.startsWith('JSS')).length,
-    SSS: activeStudents.filter(s => s.currentClass.startsWith('SSS')).length
+    SSS: activeStudents.filter(s => s.currentClass.startsWith('SSS')).length,
+    University: activeStudents.filter(s => s.currentClass.startsWith('University')).length,
   };
 
   const levelColors = {
+    'Pre-School': 'bg-rose-500',
     Nursery: 'bg-amber-500',
     Primary: 'bg-indigo-500',
     JSS: 'bg-blue-500',
-    SSS: 'bg-purple-500'
+    SSS: 'bg-purple-500',
+    University: 'bg-emerald-500',
   };
 
   // Recent high achievers (Average grade > 75 in latest term)
@@ -435,10 +441,12 @@ CEO/Principal, Givers World Mission`;
   // Attendance rate calculation across school levels for current term (Term 3)
   const attendanceData = useMemo(() => {
     const levels: Record<string, { level: string; present: number; total: number }> = {
-      Nursery: { level: 'Nursery/Prep', present: 0, total: 0 },
+      PreSchool: { level: 'Pre (1-3)', present: 0, total: 0 },
+      Nursery: { level: 'Nursery (1-3)', present: 0, total: 0 },
       Primary: { level: 'Primary (1-6)', present: 0, total: 0 },
       JSS: { level: 'JSS (1-3)', present: 0, total: 0 },
       SSS: { level: 'SSS (1-3)', present: 0, total: 0 },
+      University: { level: 'University', present: 0, total: 0 },
     };
 
     records.forEach(r => {
@@ -446,12 +454,15 @@ CEO/Principal, Givers World Mission`;
       if (!student || student.status !== 'Active') return;
 
       let key = 'Primary';
-      if (student.currentClass.startsWith('Prep')) key = 'Nursery';
+      if (student.currentClass.startsWith('Pre') || student.currentClass.startsWith('Prep')) key = 'PreSchool';
+      else if (student.currentClass.startsWith('Nursery')) key = 'Nursery';
+      else if (student.currentClass.startsWith('Class')) key = 'Primary';
       else if (student.currentClass.startsWith('JSS')) key = 'JSS';
       else if (student.currentClass.startsWith('SSS')) key = 'SSS';
+      else if (student.currentClass.startsWith('University')) key = 'University';
 
       const att = r.terms[3]?.attendance || r.terms[2]?.attendance;
-      if (att) {
+      if (att && levels[key]) {
         levels[key].present += att.presentDays;
         levels[key].total += att.totalDays;
       }
@@ -1098,7 +1109,14 @@ CEO/Principal, Givers World Mission`;
                     <div className="flex justify-between text-xs font-medium text-slate-600">
                       <span className="flex items-center gap-2">
                         <span className={`w-2.5 h-2.5 rounded-full ${barColor}`}></span>
-                        {level} {level === 'Nursery' ? '(Prep 1 - Prep 2)' : level === 'Primary' ? '(Class 1 - 6)' : level === 'JSS' ? '(JSS 1 - 3)' : '(SSS 1 - 3)'}
+                        {level} {
+                          level === 'Pre-School' ? '(Pre 1 - 3)' :
+                          level === 'Nursery' ? '(Nursery 1 - 3)' :
+                          level === 'Primary' ? '(Class 1 - 6)' :
+                          level === 'JSS' ? '(JSS 1 - 3)' :
+                          level === 'SSS' ? '(SSS 1 - 3)' :
+                          '(Tertiary / Undergrad)'
+                        }
                       </span>
                       <span>{count} Students ({percentage}%)</span>
                     </div>
@@ -1235,17 +1253,29 @@ CEO/Principal, Givers World Mission`;
                 </span>
               </div>
 
-              {pendingFeeStudents.filter(s => s.status === 'Unpaid').length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleOpenBulkNotice}
-                  className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
-                  title="Open automated batch notification dialog for all unpaid students"
+                  onClick={() => onNavigate('fees', { openSmsModal: true, term: pendingTermFilter })}
+                  className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
+                  title="Open Automated Fee Balance Flagging & SMS Dispatch Summary"
                 >
-                  <Send className="w-3 h-3" />
-                  <span>Notify All Unpaid ({pendingFeeStudents.filter(s => s.status === 'Unpaid').length})</span>
+                  <MessageSquare className="w-3 h-3" />
+                  <span>Guardian SMS Center</span>
                 </button>
-              )}
+
+                {pendingFeeStudents.filter(s => s.status === 'Unpaid').length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleOpenBulkNotice}
+                    className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-auto"
+                    title="Open automated batch notification dialog for all unpaid students"
+                  >
+                    <Send className="w-3 h-3" />
+                    <span>Notify All Unpaid ({pendingFeeStudents.filter(s => s.status === 'Unpaid').length})</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Search & Status Filter Controls */}

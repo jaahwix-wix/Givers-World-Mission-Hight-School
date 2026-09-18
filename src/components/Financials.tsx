@@ -20,10 +20,14 @@ import {
   User,
   RefreshCw,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare,
+  Send,
+  Smartphone
 } from 'lucide-react';
 import { Student, StudentFeeLedger, FeeTransaction } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import FeeAlertSMSCenter from './FeeAlertSMSCenter';
 
 interface FinancialsProps {
   students: Student[];
@@ -31,9 +35,10 @@ interface FinancialsProps {
   onAddTransaction: (studentId: string, term: number, tx: Omit<FeeTransaction, 'id'>) => void;
   initialStudentId?: string;
   initialTerm?: number;
+  openSmsModal?: boolean;
 }
 
-export default function Financials({ students, fees, onAddTransaction, initialStudentId, initialTerm }: FinancialsProps) {
+export default function Financials({ students, fees, onAddTransaction, initialStudentId, initialTerm, openSmsModal }: FinancialsProps) {
   
   // State
   const [search, setSearch] = useState('');
@@ -79,6 +84,19 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'Bank Deposit' | 'Orange Money' | 'Africell Money' | 'Cash'>('Orange Money');
   const [paymentReceipt, setPaymentReceipt] = useState('');
+
+  // SMS Alert Center State
+  const [isSmsModalOpen, setIsSmsModalOpen] = useState(false);
+  const [smsTargetStudentId, setSmsTargetStudentId] = useState<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    if (openSmsModal) {
+      setIsSmsModalOpen(true);
+      if (initialStudentId) {
+        setSmsTargetStudentId(initialStudentId);
+      }
+    }
+  }, [openSmsModal, initialStudentId]);
 
   // 1. Core Summary Metrics
   const activeStudents = students.filter(s => s.status === 'Active');
@@ -136,13 +154,25 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
     };
   }, [activeStudents, fees, selectedTermFilter]);
 
+  // Automated flagged count for pending fees
+  const flaggedPendingCount = React.useMemo(() => {
+    return fees.filter(f => {
+      const s = students.find(stud => stud.id === f.studentId);
+      if (!s || s.status !== 'Active') return false;
+      const termFee = f.terms[selectedTermFilter];
+      return termFee && (termFee.status === 'Unpaid' || termFee.status === 'Partial') && termFee.balance > 0;
+    }).length;
+  }, [fees, students, selectedTermFilter]);
+
   // Academic Tier Collection Progress Calculation
   const tierStats = React.useMemo(() => {
     const tiers = [
-      { key: 'nursery', name: 'Nursery & Prep', match: (c: string) => c.startsWith('Prep') || c.startsWith('Nursery') },
+      { key: 'pre', name: 'Pre-School (Pre 1-3)', match: (c: string) => c.startsWith('Pre') || c.startsWith('Prep') },
+      { key: 'nursery', name: 'Nursery (Nursery 1-3)', match: (c: string) => c.startsWith('Nursery') },
       { key: 'primary', name: 'Primary (Class 1-6)', match: (c: string) => c.startsWith('Class') },
       { key: 'jss', name: 'Junior Secondary (JSS 1-3)', match: (c: string) => c.startsWith('JSS') },
       { key: 'sss', name: 'Senior Secondary (SSS 1-3)', match: (c: string) => c.startsWith('SSS') },
+      { key: 'university', name: 'University & Tertiary', match: (c: string) => c.startsWith('University') },
     ];
 
     return tiers.map(tier => {
@@ -249,8 +279,25 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
             {isReconciling ? 'Recalculating Progress...' : 'Ledger Synced'}
           </span>
         </div>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-[11px] text-slate-400">Term {selectedTermFilter} Active • Updated: {lastSyncTime}</span>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Automated SMS Fee Alert Center Action */}
+          <button
+            type="button"
+            onClick={() => {
+              setSmsTargetStudentId(undefined);
+              setIsSmsModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 rounded-xl transition-all cursor-pointer shadow-xs"
+            title="Open Automated Fee Balance Flagging & Guardian SMS Alert Dispatcher"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Guardian SMS Alerts</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-white text-rose-700 text-[10px] font-black">
+              {flaggedPendingCount} Flagged
+            </span>
+          </button>
+
+          <span className="text-[11px] text-slate-400 hidden md:inline">Term {selectedTermFilter} Active • Updated: {lastSyncTime}</span>
           <button
             type="button"
             onClick={triggerReconciliation}
@@ -283,7 +330,7 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
             </div>
           </div>
           <p className="text-[10px] text-slate-400 mt-3 flex items-center justify-between">
-            <span>Across Prep 1 to SSS 3 tracks</span>
+            <span>Across Pre 1 to University tracks</span>
             <span className="font-semibold text-slate-600 dark:text-slate-300">{activeStudents.length} Active Accounts</span>
           </p>
         </div>
@@ -609,15 +656,30 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
                       </span>
                     </td>
 
-                    {/* Payment Trigger */}
+                    {/* Payment Trigger & SMS */}
                     <td className="py-3.5 px-5 text-right">
                       {termDetail.balance > 0 ? (
-                        <button
-                          onClick={() => handleRecordPaymentClick(student.id)}
-                          className="inline-flex items-center gap-1.5 py-1 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] shadow-xs cursor-pointer transition-colors"
-                        >
-                          <PlusCircle className="w-3.5 h-3.5" /> Post Payment
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSmsTargetStudentId(student.id);
+                              setIsSmsModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 py-1 px-2 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 font-bold text-[10px] border border-rose-200 dark:border-rose-900/50 cursor-pointer transition-colors"
+                            title={`Send automated SMS fee reminder to ${student.parentName} (${student.parentPhone})`}
+                          >
+                            <MessageSquare className="w-3 h-3" />
+                            <span>SMS Alert</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleRecordPaymentClick(student.id)}
+                            className="inline-flex items-center gap-1 py-1 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] shadow-xs cursor-pointer transition-colors"
+                          >
+                            <PlusCircle className="w-3 h-3" /> Post Pay
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-[10px] text-slate-400 font-semibold flex items-center justify-end gap-1">
                           <Check className="w-3.5 h-3.5 text-indigo-500" /> Accounts Cleared
@@ -812,6 +874,18 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
           </div>
         )}
       </AnimatePresence>
+      {/* Automated Fee Balance Flagging & Guardian SMS Dispatcher Modal */}
+      <FeeAlertSMSCenter
+        isOpen={isSmsModalOpen}
+        onClose={() => {
+          setIsSmsModalOpen(false);
+          setSmsTargetStudentId(undefined);
+        }}
+        students={students}
+        fees={fees}
+        initialSelectedTerm={selectedTermFilter}
+        initialStudentId={smsTargetStudentId}
+      />
     </div>
   );
 }

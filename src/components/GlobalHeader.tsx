@@ -15,7 +15,12 @@ import {
   Sparkles, 
   ArrowRight,
   Shield,
-  Key
+  Key,
+  Lock,
+  Clock,
+  IdCard,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Student, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
@@ -32,10 +37,11 @@ interface GlobalHeaderProps {
 }
 
 export default function GlobalHeader({ students, fees, activeTab, onNavigate, onOpenPrivileges }: GlobalHeaderProps) {
-  const { user, role, privileges, isFirebaseOnline } = useAuth();
+  const { user, role, privileges, isFirebaseOnline, lockSession, secondsRemaining } = useAuth();
   const { alerts, unreadCount, markAsRead, markAllAsRead, addAnnouncement } = useNotifications({ students, fees });
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -181,8 +187,25 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate, on
                             <h4 className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
                               {student.name}
                             </h4>
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono shrink-0">
-                              {student.admissionNumber}
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono shrink-0">
+                              <span>{student.admissionNumber}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(student.admissionNumber);
+                                  setCopiedId(student.id);
+                                  setTimeout(() => setCopiedId(null), 2000);
+                                }}
+                                className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-0.5 rounded cursor-pointer"
+                                title="Copy Student ID"
+                              >
+                                {copiedId === student.id ? (
+                                  <Check className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-2.5 h-2.5" />
+                                )}
+                              </button>
                             </span>
                           </div>
                           
@@ -236,6 +259,21 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate, on
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
+                            setIsOpen(false);
+                            setSearchQuery('');
+                            onNavigate('id-cards', { type: 'student', id: student.id });
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white dark:bg-purple-950/80 dark:hover:bg-purple-600 dark:text-purple-300 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                          title="Generate & View ID Card"
+                        >
+                          <IdCard className="w-3 h-3" />
+                          <span>ID Card</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             handleSelectStudent(student, 'report-card');
                           }}
                           className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white dark:bg-blue-950/80 dark:hover:bg-blue-600 dark:text-blue-300 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
@@ -269,6 +307,28 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate, on
         <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>Academic Year: 2025/2026</span>
+        </div>
+
+        {/* 1-Minute Inactivity Session Monitor & Manual Lock */}
+        <div 
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+            secondsRemaining <= 15
+              ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800/80 animate-pulse'
+              : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+          }`}
+          title="Auto-locks after 1 minute of inactivity. Any interaction resets the timer."
+        >
+          <Clock className={`w-3.5 h-3.5 ${secondsRemaining <= 15 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-500'}`} />
+          <span className="hidden sm:inline text-[11px]">Auto-Lock:</span>
+          <span className="font-mono font-bold text-xs">{secondsRemaining}s</span>
+          <button
+            type="button"
+            onClick={lockSession}
+            className="ml-1 p-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            title="Lock session now"
+          >
+            <Lock className="w-3 h-3" />
+          </button>
         </div>
 
         {/* Notification Bell with Dropdown */}

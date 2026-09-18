@@ -23,6 +23,7 @@ import {
   Compass
 } from 'lucide-react';
 import { Student, StudentClass } from '../types';
+import { CLASSES_LIST } from '../constants';
 
 interface BusManagementProps {
   students: Student[];
@@ -210,14 +211,6 @@ export default function BusManagement({ students }: BusManagementProps) {
   const getBusOccupancy = (busId: string) => {
     return Object.values(assignments).filter(id => id === busId).length;
   };
-
-  // Unique class list
-  const CLASSES: StudentClass[] = [
-    'Prep 1', 'Prep 2',
-    'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6',
-    'JSS 1', 'JSS 2', 'JSS 3',
-    'SSS 1', 'SSS 2', 'SSS 3'
-  ];
 
   return (
     <div className="space-y-6" id="school-bus-management">
@@ -476,8 +469,8 @@ export default function BusManagement({ students }: BusManagementProps) {
                 onChange={(e) => setClassFilter(e.target.value as any)}
                 className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
               >
-                <option value="All">All Grades</option>
-                {CLASSES.map(cls => (
+                <option value="All">All Grades (Pre 1 - University)</option>
+                {CLASSES_LIST.map(cls => (
                   <option key={cls} value={cls}>{cls}</option>
                 ))}
               </select>

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from 'react';
 import { 
   onAuthStateChanged, 
   signInWithPopup, 
@@ -26,9 +26,15 @@ interface AuthContextType {
   updateUserRole: (targetUserId: string, newRole: UserRole) => Promise<void>;
   userList: AuthUser[];
   can: (permission: keyof Omit<RolePrivileges, 'role' | 'label' | 'description'>) => boolean;
+  isSessionLocked: boolean;
+  secondsRemaining: number;
+  lockSession: () => void;
+  unlockSession: (role?: UserRole) => void;
+  resetInactivityTimer: () => void;
 }
 
 const BOOTSTRAPPED_ADMIN_EMAIL = 'nabieumelissajosephine@gmail.com';
+const INACTIVITY_TIMEOUT_SECONDS = 60; // 1 minute inactivity timeout
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -157,14 +163,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Inactivity & Session Lock State
+  const [isSessionLocked, setIsSessionLocked] = useState<boolean>(() => {
+    return sessionStorage.getItem('sma_session_locked') === 'true';
+  });
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(INACTIVITY_TIMEOUT_SECONDS);
+  const lastActivityRef = useRef<number>(Date.now());
+
+  // Function to lock session
+  const lockSession = useCallback(() => {
+    setIsSessionLocked(true);
+    sessionStorage.setItem('sma_session_locked', 'true');
+    setSecondsRemaining(0);
+  }, []);
+
+  // Function to unlock session
+  const unlockSession = useCallback((roleToUnlock?: UserRole) => {
+    if (roleToUnlock) {
+      localStorage.setItem('sma_active_role', roleToUnlock);
+      setUser(prev => {
+        if (prev) {
+          return {
+            ...prev,
+            role: roleToUnlock,
+            displayName: prev.displayName || DEMO_PRESET_USERS[roleToUnlock].displayName,
+          };
+        }
+        return DEMO_PRESET_USERS[roleToUnlock];
+      });
+    }
+    setIsSessionLocked(false);
+    sessionStorage.removeItem('sma_session_locked');
+    lastActivityRef.current = Date.now();
+    setSecondsRemaining(INACTIVITY_TIMEOUT_SECONDS);
+  }, []);
+
+  // Reset inactivity timer
+  const resetInactivityTimer = useCallback(() => {
+    if (!isSessionLocked) {
+      lastActivityRef.current = Date.now();
+      setSecondsRemaining(INACTIVITY_TIMEOUT_SECONDS);
+    }
+  }, [isSessionLocked]);
+
+  // Global Inactivity Event Listeners (1 minute timeout)
+  useEffect(() => {
+    const handleUserActivity = () => {
+      if (isSessionLocked) return;
+      const now = Date.now();
+      // Throttle timestamp updates to at most once every 500ms
+      if (now - lastActivityRef.current >= 500) {
+        lastActivityRef.current = now;
+      }
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click', 'wheel'];
+    activityEvents.forEach(evt => {
+      window.addEventListener(evt, handleUserActivity, { passive: true });
+    });
+
+    // Inactivity countdown & lock trigger interval (every 1 second)
+    const interval = setInterval(() => {
+      if (isSessionLocked) {
+        setSecondsRemaining(0);
+        return;
+      }
+
+      const now = Date.now();
+      const elapsedSeconds = Math.floor((now - lastActivityRef.current) / 1000);
+      const remaining = Math.max(0, INACTIVITY_TIMEOUT_SECONDS - elapsedSeconds);
+      setSecondsRemaining(remaining);
+
+      // Trigger automatic session lock when 1 minute of inactivity elapses
+      if (remaining <= 0) {
+        setIsSessionLocked(true);
+        sessionStorage.setItem('sma_session_locked', 'true');
+      }
+    }, 1000);
+
+    return () => {
+      activityEvents.forEach(evt => {
+        window.removeEventListener(evt, handleUserActivity);
+      });
+      clearInterval(interval);
+    };
+  }, [isSessionLocked]);
+
   // Sign Out
   const signOutUser = async () => {
     try {
       setIsLoading(true);
       await firebaseSignOut(auth);
-      // Reset to default guest admin demo for testing
+      // Reset to default guest admin demo for testing and lock session
       setUser(DEMO_PRESET_USERS.admin);
       localStorage.removeItem('sma_active_role');
+      setIsSessionLocked(true);
+      sessionStorage.setItem('sma_session_locked', 'true');
+      setSecondsRemaining(0);
     } catch (error) {
       console.error('Sign out error:', error);
     } finally {
@@ -226,6 +321,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUserRole,
         userList,
         can,
+        isSessionLocked,
+        secondsRemaining,
+        lockSession,
+        unlockSession,
+        resetInactivityTimer,
       }}
     >
       {children}

@@ -398,7 +398,7 @@ export default function StudentList({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Student Directory</h2>
-          <p className="text-xs text-slate-400">Search, filter, and register student records for Prep 1 to SSS 3</p>
+          <p className="text-xs text-slate-400">Search, filter, and register student records from Pre 1 through University</p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <button 
@@ -409,12 +409,16 @@ export default function StudentList({
           </button>
           <button 
             onClick={() => {
-              setIdCardSelectedStudent(null);
-              setIsIdCardGeneratorOpen(true);
+              if (onNavigate) {
+                onNavigate('id-cards');
+              } else {
+                setIdCardSelectedStudent(null);
+                setIsIdCardGeneratorOpen(true);
+              }
             }}
             className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-white hover:bg-slate-50 text-indigo-600 border border-indigo-200/60 font-semibold text-sm transition-colors shadow-xs cursor-pointer"
           >
-            <CreditCard className="w-4.5 h-4.5" /> ID Cards Portal
+            <CreditCard className="w-4.5 h-4.5" /> ID Cards & Badges
           </button>
           <button 
             onClick={handleAddClick}
@@ -563,29 +567,29 @@ export default function StudentList({
                         onChange={(e) => {
                           const val = e.target.value as StudentClass | 'All';
                           setSelectedClass(val);
-                          if (!val.startsWith('SSS')) setSelectedStream('All');
+                          if (!val.startsWith('SSS') && !val.startsWith('University')) setSelectedStream('All');
                         }}
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
                       >
-                        <option value="All">All Class Levels (Prep 1 to SSS 3)</option>
+                        <option value="All">All Class Levels (Pre 1 to University)</option>
                         {CLASSES_LIST.map(c => (
                           <option key={c} value={c}>{c}</option>
                         ))}
                       </select>
                     </div>
 
-                    {/* If SSS class or All: Stream */}
-                    {(selectedClass === 'All' || selectedClass.startsWith('SSS')) && (
+                    {/* If SSS or University class or All: Stream */}
+                    {(selectedClass === 'All' || selectedClass.startsWith('SSS') || selectedClass.startsWith('University')) && (
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
-                          SSS Academic Stream
+                          {selectedClass.startsWith('University') ? 'Faculty / Stream' : 'Academic Stream'}
                         </label>
                         <select
                           value={selectedStream}
                           onChange={(e) => setSelectedStream(e.target.value as SSSStream | 'All')}
                           className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500 cursor-pointer"
                         >
-                          <option value="All">All SSS Streams</option>
+                          <option value="All">All Streams & Faculties</option>
                           {SSS_STREAMS.map(s => (
                             <option key={s} value={s}>{s} Stream</option>
                           ))}
@@ -675,11 +679,11 @@ export default function StudentList({
                 onChange={(e) => {
                   const val = e.target.value as StudentClass | 'All';
                   setSelectedClass(val);
-                  if (!val.startsWith('SSS')) setSelectedStream('All');
+                  if (!val.startsWith('SSS') && !val.startsWith('University')) setSelectedStream('All');
                 }}
                 className="w-full pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-200/80 rounded-2xl text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-700 appearance-none cursor-pointer"
               >
-                <option value="All">All Classes (Prep 1 - SSS 3)</option>
+                <option value="All">All Classes (Pre 1 - University)</option>
                 {CLASSES_LIST.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
@@ -1356,9 +1360,9 @@ export default function StudentList({
                           onChange={(e) => {
                             const val = e.target.value as StudentClass;
                             setFormClass(val);
-                            if (val.startsWith('SSS') && !formStream) {
+                            if ((val.startsWith('SSS') || val.startsWith('University')) && !formStream) {
                               setFormStream('Science');
-                            } else if (!val.startsWith('SSS')) {
+                            } else if (!val.startsWith('SSS') && !val.startsWith('University')) {
                               setFormStream(undefined);
                             }
                           }}
@@ -1370,17 +1374,19 @@ export default function StudentList({
                         </select>
                       </div>
 
-                      {/* Stream (conditional for SSS) */}
-                      {formClass.startsWith('SSS') ? (
+                      {/* Stream (conditional for SSS and University) */}
+                      {(formClass.startsWith('SSS') || formClass.startsWith('University')) ? (
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-600">Academic Stream</label>
+                          <label className="text-xs font-semibold text-slate-600">
+                            {formClass.startsWith('University') ? 'Faculty / Discipline' : 'Academic Stream'}
+                          </label>
                           <select
                             value={formStream || 'Science'}
                             onChange={(e) => setFormStream(e.target.value as SSSStream)}
                             className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 bg-white"
                           >
                             {SSS_STREAMS.map(s => (
-                              <option key={s} value={s}>{s}</option>
+                              <option key={s} value={s}>{s} {formClass.startsWith('University') ? 'Faculty' : 'Stream'}</option>
                             ))}
                           </select>
                         </div>
@@ -1397,15 +1403,17 @@ export default function StudentList({
                         </div>
                       )}
 
-                      {/* If SSS, show Section here */}
-                      {formClass.startsWith('SSS') && (
+                      {/* If SSS or University, show Section / Department here */}
+                      {(formClass.startsWith('SSS') || formClass.startsWith('University')) && (
                         <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-600">Class Section / Arm</label>
+                          <label className="text-xs font-semibold text-slate-600">
+                            {formClass.startsWith('University') ? 'Department / Cohort Group' : 'Class Section / Arm'}
+                          </label>
                           <input 
                             type="text" 
                             value={formSection}
                             onChange={(e) => setFormSection(e.target.value)}
-                            placeholder="e.g. A, B, Alpha, Blue"
+                            placeholder={formClass.startsWith('University') ? "e.g. Dept of Computing, Cohort 1" : "e.g. A, B, Alpha, Blue"}
                             className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700"
                           />
                         </div>

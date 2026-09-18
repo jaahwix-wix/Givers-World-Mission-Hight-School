@@ -192,15 +192,28 @@ export default function AcademicPortal({
     let gradesToLoad = termPerf.grades;
     if (gradesToLoad.length === 0) {
       const subjects = getSubjectsForClass(activeStudent.currentClass, activeStudent.stream);
-      gradesToLoad = subjects.map((subj, idx) => ({
-        id: `g-${activeStudent.id}-${selectedTerm}-${idx}`,
-        subject: subj,
-        caScore: 0,
-        examScore: 0,
-        totalScore: 0,
-        grade: activeStudent.currentClass.startsWith('Class') || activeStudent.currentClass.startsWith('Prep') ? 'E' : 'F9',
-        remark: 'Fail'
-      }));
+      gradesToLoad = subjects.map((subj, idx) => {
+        let defaultGrade = 'F9';
+        if (activeStudent.currentClass.startsWith('University')) {
+          defaultGrade = 'F';
+        } else if (
+          activeStudent.currentClass.startsWith('Class') || 
+          activeStudent.currentClass.startsWith('Prep') || 
+          activeStudent.currentClass.startsWith('Pre') || 
+          activeStudent.currentClass.startsWith('Nursery')
+        ) {
+          defaultGrade = 'E';
+        }
+        return {
+          id: `g-${activeStudent.id}-${selectedTerm}-${idx}`,
+          subject: subj,
+          caScore: 0,
+          examScore: 0,
+          totalScore: 0,
+          grade: defaultGrade,
+          remark: 'Fail'
+        };
+      });
     }
 
     setEditGrades(JSON.parse(JSON.stringify(gradesToLoad)));
@@ -217,13 +230,17 @@ export default function AcademicPortal({
   // Handle grade edits
   const handleScoreChange = (idx: number, type: 'ca' | 'exam', val: number) => {
     const updated = [...editGrades];
-    const isPrimary = selectedClass.startsWith('Prep') || selectedClass.startsWith('Class');
+    const is40_60 = selectedClass.startsWith('Pre') || 
+                    selectedClass.startsWith('Prep') || 
+                    selectedClass.startsWith('Nursery') || 
+                    selectedClass.startsWith('Class') ||
+                    selectedClass.startsWith('University');
     
     if (type === 'ca') {
-      const maxCA = isPrimary ? 40 : 30;
+      const maxCA = is40_60 ? 40 : 30;
       updated[idx].caScore = Math.max(0, Math.min(maxCA, val));
     } else {
-      const maxExam = isPrimary ? 60 : 70;
+      const maxExam = is40_60 ? 60 : 70;
       updated[idx].examScore = Math.max(0, Math.min(maxExam, val));
     }
 

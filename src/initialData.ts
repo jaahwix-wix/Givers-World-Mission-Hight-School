@@ -208,6 +208,76 @@ export const DEMO_SAMPLE_STUDENTS: Student[] = [
     enrollmentYear: 2022,
     status: 'Active',
     profileColor: 'cyan'
+  },
+  {
+    id: 'stud-011',
+    name: 'Mariama Kamara',
+    admissionNumber: 'SMA-2026-0501',
+    dateOfBirth: '2023-03-15',
+    gender: 'Female',
+    currentClass: 'Pre 1',
+    classSection: 'A',
+    parentName: 'Sullay Kamara',
+    parentPhone: '+232 76 345678',
+    address: '7 Lowcost Housing, Kambia 2, Northern Province',
+    enrollmentYear: 2026,
+    status: 'Active',
+    profileColor: 'rose',
+    allergies: 'None',
+    bloodType: 'B+',
+    emergencyContactName: 'Sullay Kamara',
+    emergencyContactPhone: '+232 76 345678',
+    emergencyContactRelation: 'Father',
+    verified: true,
+    verifiedBy: 'Evangelist Saint Turay (CEO/Principal & Admin)',
+    verifiedAt: '2026-01-15'
+  },
+  {
+    id: 'stud-012',
+    name: 'Ibrahim S. Bangura',
+    admissionNumber: 'SMA-2025-0488',
+    dateOfBirth: '2021-06-10',
+    gender: 'Male',
+    currentClass: 'Nursery 2',
+    classSection: 'Sunflowers',
+    parentName: 'Hawa Bangura',
+    parentPhone: '+232 78 889900',
+    address: '24 Hospital Road, Kambia',
+    enrollmentYear: 2025,
+    status: 'Active',
+    profileColor: 'amber',
+    allergies: 'Lactose intolerant',
+    bloodType: 'O+',
+    emergencyContactName: 'Hawa Bangura',
+    emergencyContactPhone: '+232 78 889900',
+    emergencyContactRelation: 'Mother',
+    verified: true,
+    verifiedBy: 'Evangelist Saint Turay (CEO/Principal & Admin)',
+    verifiedAt: '2025-09-10'
+  },
+  {
+    id: 'stud-013',
+    name: 'Alpha Umaru Bah',
+    admissionNumber: 'GWM-UNI-2024-0012',
+    dateOfBirth: '2004-10-18',
+    gender: 'Male',
+    currentClass: 'University Year 2',
+    stream: 'Science',
+    classSection: 'Department of Computing & Applied Sciences',
+    parentName: 'Dr. Momoh Bah',
+    parentPhone: '+232 77 223344',
+    address: '88 University Way, Northern Province, Sierra Leone',
+    enrollmentYear: 2024,
+    status: 'Active',
+    profileColor: 'emerald',
+    allergies: 'None',
+    bloodType: 'A+',
+    emergencyContactName: 'Dr. Momoh Bah',
+    emergencyContactPhone: '+232 77 223344',
+    emergencyContactRelation: 'Guardian',
+    verified: true,
+    verifiedBy: 'Evangelist Saint Turay (CEO/Principal & Admin)',
+    verifiedAt: '2024-10-02'
   }
 ];
 
@@ -222,13 +292,14 @@ function generateMockGrades(studentId: string, className: StudentClass, stream?:
     const baseExam = 40 + (idx % 5) * 5; // e.g., 40, 45, 50, 55, 60
     
     let caScore = Math.min(30, Math.round(baseCA * factor));
-    // For primary level, CA is out of 40, Exam out of 60
-    const isPrimary = className.startsWith('Prep') || className.startsWith('Class');
-    if (isPrimary) {
+    // For primary and early childhood level and university, CA is out of 40, Exam out of 60
+    const isPrimaryOrEarly = className.startsWith('Pre') || className.startsWith('Prep') || className.startsWith('Nursery') || className.startsWith('Class');
+    const isUniversity = className.startsWith('University');
+    if (isPrimaryOrEarly || isUniversity) {
       caScore = Math.min(40, Math.round((baseCA + 8) * factor));
     }
     
-    const maxExam = isPrimary ? 60 : 70;
+    const maxExam = (isPrimaryOrEarly || isUniversity) ? 60 : 70;
     const examScore = Math.min(maxExam, Math.round(baseExam * factor));
     const totalScore = caScore + examScore;
     
@@ -418,13 +489,24 @@ export const DEMO_SAMPLE_NATIONAL_EXAMS: NationalExamPrep[] = [
 
 // Sample Fee Ledgers for students
 export const DEMO_SAMPLE_FEE_LEDGERS: StudentFeeLedger[] = DEMO_SAMPLE_STUDENTS.map((student, idx) => {
-  // Prep & Primary: SLL 2,500 per term
-  // JSS: SLL 3,500 per term
-  // SSS: SLL 4,500 per term
+  // Pre-School & Nursery: SLL 2,000 per term
+  // Primary (Class 1-6): SLL 2,500 per term
+  // JSS (1-3): SLL 3,500 per term
+  // SSS (1-3): SLL 4,500 per term
+  // University: SLL 6,500 per semester
   // (In Sierra Leone Leones, using modern Leones SLE/SLL denomination values)
   let baseFee = 2500;
-  if (student.currentClass.startsWith('JSS')) baseFee = 3500;
-  if (student.currentClass.startsWith('SSS')) baseFee = 4500;
+  if (student.currentClass.startsWith('Pre') || student.currentClass.startsWith('Prep') || student.currentClass.startsWith('Nursery')) {
+    baseFee = 2000;
+  } else if (student.currentClass.startsWith('Class')) {
+    baseFee = 2500;
+  } else if (student.currentClass.startsWith('JSS')) {
+    baseFee = 3500;
+  } else if (student.currentClass.startsWith('SSS')) {
+    baseFee = 4500;
+  } else if (student.currentClass.startsWith('University')) {
+    baseFee = 6500;
+  }
 
   // Let's vary the payment statuses
   let t1Paid = baseFee;
@@ -567,9 +649,13 @@ export const DEFAULT_SCHOOL_ANNOUNCEMENTS: SchoolAnnouncement[] = [
 export const DEFAULT_SAMPLE_TEACHERS: Teacher[] = [
   {
     id: 't-001',
+    staffId: 'STF-2021-001',
     name: 'Mr. Sorie Conteh',
     email: 'sorie.conteh@giversworldmission.edu.sl',
     phone: '+232 76 345678',
+    roleTitle: 'Head of Mathematics',
+    department: 'Department of Mathematics & Computing',
+    bloodType: 'O+',
     subjects: ['Mathematics (Core)', 'Further Mathematics'],
     classes: ['JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'],
     salary: 3800000,
@@ -582,9 +668,13 @@ export const DEFAULT_SAMPLE_TEACHERS: Teacher[] = [
   },
   {
     id: 't-002',
+    staffId: 'STF-2020-002',
     name: 'Mrs. Mariama Sesay',
     email: 'mariama.sesay@giversworldmission.edu.sl',
     phone: '+232 78 912345',
+    roleTitle: 'Head of Languages',
+    department: 'Department of English & Literature',
+    bloodType: 'A+',
     subjects: ['English Language', 'Literature in English'],
     classes: ['JSS 2', 'JSS 3', 'SSS 2', 'SSS 3'],
     salary: 3600000,
@@ -597,9 +687,13 @@ export const DEFAULT_SAMPLE_TEACHERS: Teacher[] = [
   },
   {
     id: 't-003',
+    staffId: 'STF-2022-003',
     name: 'Dr. Joseph Kamara',
     email: 'joseph.kamara@giversworldmission.edu.sl',
     phone: '+232 30 554433',
+    roleTitle: 'Senior Science Lecturer',
+    department: 'Department of Natural Sciences',
+    bloodType: 'B+',
     subjects: ['Chemistry', 'Biology', 'Integrated Science'],
     classes: ['JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'],
     salary: 4200000,
@@ -612,9 +706,13 @@ export const DEFAULT_SAMPLE_TEACHERS: Teacher[] = [
   },
   {
     id: 't-004',
+    staffId: 'STF-2023-004',
     name: 'Mr. Alie Bangura',
     email: 'alie.bangura@giversworldmission.edu.sl',
     phone: '+232 77 889900',
+    roleTitle: 'Physics & General Science Tutor',
+    department: 'Department of Applied Physics',
+    bloodType: 'O-',
     subjects: ['Physics', 'General Science'],
     classes: ['Class 6', 'JSS 1', 'SSS 1'],
     salary: 3500000,

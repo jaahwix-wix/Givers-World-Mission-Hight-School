@@ -6,23 +6,93 @@
 import { StudentClass, SSSStream } from './types';
 
 export const CLASSES_LIST: StudentClass[] = [
-  'Prep 1', 'Prep 2',
+  'Pre 1', 'Pre 2', 'Pre 3',
+  'Nursery 1', 'Nursery 2', 'Nursery 3',
   'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6',
   'JSS 1', 'JSS 2', 'JSS 3',
-  'SSS 1', 'SSS 2', 'SSS 3'
+  'SSS 1', 'SSS 2', 'SSS 3',
+  'University Year 1', 'University Year 2', 'University Year 3', 'University Year 4',
+  'University'
 ];
+
+export type SchoolTier = 'Pre-School' | 'Nursery' | 'Primary' | 'JSS' | 'SSS' | 'University';
+
+export interface ClassGroup {
+  tier: SchoolTier;
+  label: string;
+  badgeColor: string;
+  classes: StudentClass[];
+}
+
+export const CLASS_GROUPS: ClassGroup[] = [
+  {
+    tier: 'Pre-School',
+    label: 'Pre-School (Pre 1 - 3)',
+    badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
+    classes: ['Pre 1', 'Pre 2', 'Pre 3']
+  },
+  {
+    tier: 'Nursery',
+    label: 'Nursery (Nursery 1 - 3)',
+    badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+    classes: ['Nursery 1', 'Nursery 2', 'Nursery 3']
+  },
+  {
+    tier: 'Primary',
+    label: 'Primary School (Class 1 - 6)',
+    badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    classes: ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6']
+  },
+  {
+    tier: 'JSS',
+    label: 'Junior Secondary (JSS 1 - 3)',
+    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+    classes: ['JSS 1', 'JSS 2', 'JSS 3']
+  },
+  {
+    tier: 'SSS',
+    label: 'Senior Secondary (SSS 1 - 3)',
+    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+    classes: ['SSS 1', 'SSS 2', 'SSS 3']
+  },
+  {
+    tier: 'University',
+    label: 'University & Tertiary',
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    classes: ['University Year 1', 'University Year 2', 'University Year 3', 'University Year 4', 'University']
+  }
+];
+
+export function getTierForClass(className: string): SchoolTier {
+  if (className.startsWith('Pre') || className.startsWith('Prep')) return 'Pre-School';
+  if (className.startsWith('Nursery')) return 'Nursery';
+  if (className.startsWith('Class')) return 'Primary';
+  if (className.startsWith('JSS')) return 'JSS';
+  if (className.startsWith('SSS')) return 'SSS';
+  if (className.startsWith('University')) return 'University';
+  return 'Primary';
+}
 
 export const SSS_STREAMS: SSSStream[] = ['Science', 'Arts', 'Commercial', 'General'];
 
-// Subject lists specific to Sierra Leone school levels
+// Subject lists specific to Sierra Leone and Tertiary educational levels
 export const LEVEL_SUBJECTS = {
-  PREP: [
-    'Numeracy',
-    'Literacy',
-    'Phonics',
+  PRE_SCHOOL: [
+    'Early Numeracy',
+    'Early Literacy',
+    'Phonics & Letter Sounds',
     'Sensory & Practical Life',
     'Creative Arts & Rhymes',
-    'Health Education'
+    'Health & Good Habits'
+  ],
+  NURSERY: [
+    'Nursery Numeracy & Shapes',
+    'Language Development & Phonics',
+    'Pre-Writing Skills',
+    'Social & Emotional Habits',
+    'Practical Life & Motor Skills',
+    'Creative Arts & Storytelling',
+    'Physical Play & Health'
   ],
   PRIMARY: [
     'English Language',
@@ -80,18 +150,61 @@ export const LEVEL_SUBJECTS = {
     'Office Practice',
     'Civic Education',
     'Geography'
+  ],
+  UNIVERSITY_GENERAL: [
+    'Research Methodology & Academic Writing',
+    'Digital Technology & Data Literacy',
+    'Critical Thinking & Logic',
+    'Applied Statistics & Quantitative Methods',
+    'Communication & Public Rhetoric',
+    'Leadership, Ethics & Governance',
+    'Entrepreneurship & Innovation'
+  ],
+  UNIVERSITY_SCIENCE: [
+    'Advanced Research & Quantitative Analysis',
+    'Computer Systems & Software Design',
+    'Applied Data Science & Statistics',
+    'Applied Science & Environmental Systems',
+    'Technical Report Writing',
+    'Science Policy & Professional Ethics',
+    'Specialized Laboratory Practicum'
+  ],
+  UNIVERSITY_COMMERCIAL: [
+    'Corporate Finance & Investment Analysis',
+    'Strategic Management & Leadership',
+    'Managerial Accounting & Auditing',
+    'Econometrics & Market Analytics',
+    'Commercial Law & Corporate Governance',
+    'Business Decision Modeling'
+  ],
+  UNIVERSITY_ARTS: [
+    'International Relations & Diplomacy',
+    'Public Policy & Administrative Law',
+    'Advanced Literature & Critical Discourse',
+    'African History & Global Development',
+    'Applied Sociological Field Research',
+    'Professional Ethics & Civic Leadership'
   ]
 };
 
 export function getSubjectsForClass(className: StudentClass, stream?: SSSStream): string[] {
-  if (className.startsWith('Prep')) {
-    return LEVEL_SUBJECTS.PREP;
+  if (className.startsWith('Pre') || className.startsWith('Prep')) {
+    return LEVEL_SUBJECTS.PRE_SCHOOL;
+  }
+  if (className.startsWith('Nursery')) {
+    return LEVEL_SUBJECTS.NURSERY;
   }
   if (className.startsWith('Class')) {
     return LEVEL_SUBJECTS.PRIMARY;
   }
   if (className.startsWith('JSS')) {
     return LEVEL_SUBJECTS.JSS;
+  }
+  if (className.startsWith('University')) {
+    if (stream === 'Science') return LEVEL_SUBJECTS.UNIVERSITY_SCIENCE;
+    if (stream === 'Commercial') return LEVEL_SUBJECTS.UNIVERSITY_COMMERCIAL;
+    if (stream === 'Arts') return LEVEL_SUBJECTS.UNIVERSITY_ARTS;
+    return LEVEL_SUBJECTS.UNIVERSITY_GENERAL;
   }
   // SSS classes
   if (stream === 'Science') {
@@ -135,8 +248,20 @@ export const PRIMARY_GRADING_SCALE: GradeScale[] = [
   { minScore: 0, grade: 'E', remark: 'Needs Improvement', isCredit: false, color: 'text-rose-600 bg-rose-50 border-rose-200' }
 ];
 
+export const UNIVERSITY_GRADING_SCALE: GradeScale[] = [
+  { minScore: 80, grade: 'A', remark: 'First Class Honors (GPA 4.0)', isCredit: true, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  { minScore: 70, grade: 'B+', remark: 'Second Class Upper (GPA 3.5)', isCredit: true, color: 'text-teal-600 bg-teal-50 border-teal-200' },
+  { minScore: 60, grade: 'B', remark: 'Second Class Lower (GPA 3.0)', isCredit: true, color: 'text-sky-600 bg-sky-50 border-sky-200' },
+  { minScore: 50, grade: 'C', remark: 'Third Class / Pass (GPA 2.0)', isCredit: true, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
+  { minScore: 45, grade: 'D', remark: 'Pass (GPA 1.5)', isCredit: false, color: 'text-amber-600 bg-amber-50 border-amber-200' },
+  { minScore: 0, grade: 'F', remark: 'Fail (GPA 0.0)', isCredit: false, color: 'text-rose-600 bg-rose-50 border-rose-200' }
+];
+
 export function getGradingScale(className: StudentClass): GradeScale[] {
-  if (className.startsWith('Prep') || className.startsWith('Class')) {
+  if (className.startsWith('University')) {
+    return UNIVERSITY_GRADING_SCALE;
+  }
+  if (className.startsWith('Pre') || className.startsWith('Prep') || className.startsWith('Nursery') || className.startsWith('Class')) {
     return PRIMARY_GRADING_SCALE;
   }
   return WAEC_GRADING_SCALE;
@@ -147,6 +272,12 @@ export function calculateGrade(score: number, className: StudentClass): { grade:
   const matched = scale.find(s => score >= s.minScore);
   if (matched) {
     return { grade: matched.grade, remark: matched.remark, color: matched.color };
+  }
+  if (className.startsWith('University')) {
+    return { grade: 'F', remark: 'Fail (GPA 0.0)', color: 'text-rose-600 bg-rose-50 border-rose-200' };
+  }
+  if (className.startsWith('Pre') || className.startsWith('Prep') || className.startsWith('Nursery') || className.startsWith('Class')) {
+    return { grade: 'E', remark: 'Needs Improvement', color: 'text-rose-600 bg-rose-50 border-rose-200' };
   }
   return { grade: 'F9', remark: 'Fail', color: 'text-rose-600 bg-rose-50 border-rose-200' };
 }

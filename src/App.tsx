@@ -21,7 +21,8 @@ import {
   Moon,
   Shield,
   Lock,
-  Key
+  Key,
+  IdCard
 } from 'lucide-react';
 import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger, FeeTransaction } from './types';
 import { 
@@ -48,9 +49,11 @@ import StudentPortal from './components/StudentPortal';
 import BusManagement from './components/BusManagement';
 import StaffManagement from './components/StaffManagement';
 import Library from './components/Library';
+import IdCardCenter from './components/IdCardCenter';
 import GlobalHeader from './components/GlobalHeader';
 import PrivilegesModal from './components/PrivilegesModal';
 import AccessRestricted from './components/AccessRestricted';
+import SessionLoginGate from './components/SessionLoginGate';
 import { useAuth } from './context/AuthContext';
 import { AnimatePresence } from 'motion/react';
 
@@ -134,6 +137,7 @@ export default function App() {
   const NAV_LINKS = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'canViewDashboard' as const, moduleName: 'Executive Dashboard', requiredDesc: 'Dashboard & KPI viewing permission' },
     { id: 'students', label: 'Student Files', icon: Users, permission: 'canViewStudents' as const, moduleName: 'Student Records', requiredDesc: 'Student registry access' },
+    { id: 'id-cards', label: 'ID Cards & Badges', icon: IdCard, permission: 'canViewStudents' as const, moduleName: 'ID Card & Credential Center', requiredDesc: 'Student & Staff identification badge management' },
     { id: 'performance', label: 'Academic Portal', icon: Award, permission: 'canViewAcademics' as const, moduleName: 'Academic Portal', requiredDesc: 'Academic grading & terminal performance access' },
     { id: 'fees', label: 'Tuition Accounts', icon: CreditCard, permission: 'canViewFinances' as const, moduleName: 'Tuition & Financial Accounts', requiredDesc: 'School Bursary and financial ledgers access' },
     { id: 'staff-management', label: 'Staff Management', icon: Briefcase, permission: 'canManageStaff' as const, moduleName: 'Staff & Personnel Management', requiredDesc: 'Staff administration and payroll authority' },
@@ -671,6 +675,14 @@ export default function App() {
                 />
               )}
 
+              {activeTab === 'id-cards' && (
+                <IdCardCenter 
+                  students={students} 
+                  onNavigate={handleNavigate}
+                  initialSelection={navigationArgs}
+                />
+              )}
+
               {activeTab === 'performance' && (
                 <AcademicPortal 
                   students={students} 
@@ -698,13 +710,15 @@ export default function App() {
                   fees={fees} 
                   onAddTransaction={handleAddTransaction}
                   initialStudentId={navigationArgs?.studentId}
-                  initialTerm={navigationArgs?.term}
+                  initialTerm={navigationArgs?.term || navigationArgs?.initialTerm}
+                  openSmsModal={navigationArgs?.openSmsModal}
                 />
               )}
 
               {activeTab === 'staff-management' && (
                 <StaffManagement 
                   students={students} 
+                  onNavigate={handleNavigate}
                 />
               )}
 
@@ -749,6 +763,9 @@ export default function App() {
         isOpen={isPrivilegesModalOpen}
         onClose={() => setIsPrivilegesModalOpen(false)}
       />
+
+      {/* Inactivity Session Lock & Login Gate (1-Minute Inactivity Timeout) */}
+      <SessionLoginGate />
 
     </div>
   );

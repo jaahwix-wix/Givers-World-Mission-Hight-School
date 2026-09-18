@@ -32,9 +32,13 @@ import {
   ShieldCheck,
   Clock,
   CheckCircle2,
-  Paperclip
+  Paperclip,
+  IdCard,
+  Copy,
+  Check
 } from 'lucide-react';
 import { StudentClass, Teacher, Assignment, Submission } from '../types';
+import { CLASSES_LIST } from '../constants';
 import PrincipalsNoticeBanner from './PrincipalsNoticeBanner';
 import { 
   DEFAULT_SAMPLE_TEACHERS, 
@@ -46,12 +50,14 @@ import { useAuth } from '../context/AuthContext';
 
 interface StaffManagementProps {
   students: any[];
+  onNavigate?: (tab: string, args?: any) => void;
 }
 
-export default function StaffManagement({ students }: StaffManagementProps) {
+export default function StaffManagement({ students, onNavigate }: StaffManagementProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [copiedStaffId, setCopiedStaffId] = useState<string | null>(null);
 
   // Navigation: "admin" vs "portal"
   const [viewMode, setViewMode] = useState<'admin' | 'portal'>('admin');
@@ -453,8 +459,12 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
 
   // Filter teachers for admin list
   const filteredTeachers = teachers.filter(t => {
-    const matchesSearch = t.name.toLowerCase().includes(adminSearch.toLowerCase()) || 
-                          t.email.toLowerCase().includes(adminSearch.toLowerCase());
+    const q = adminSearch.toLowerCase();
+    const matchesSearch = t.name.toLowerCase().includes(q) || 
+                          t.email.toLowerCase().includes(q) ||
+                          (t.staffId && t.staffId.toLowerCase().includes(q)) ||
+                          (t.department && t.department.toLowerCase().includes(q)) ||
+                          (t.roleTitle && t.roleTitle.toLowerCase().includes(q));
     const matchesSubject = adminSubjectFilter === 'All' || 
                            t.subjects.some(s => s.toLowerCase().includes(adminSubjectFilter.toLowerCase()));
     return matchesSearch && matchesSubject;
@@ -467,13 +477,6 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
     const assign = assignments.find(a => a.id === s.assignmentId);
     return assign?.teacherId === selectedTeacherId;
   });
-
-  const ALL_CLASSES_LIST: StudentClass[] = [
-    'Prep 1', 'Prep 2',
-    'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6',
-    'JSS 1', 'JSS 2', 'JSS 3',
-    'SSS 1', 'SSS 2', 'SSS 3'
-  ];
 
   return (
     <div className="space-y-6" id="staff-management-panel">
@@ -544,7 +547,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search teacher name or email..."
+                  placeholder="Search staff by Name, Staff ID (STF-xxx), or Email..."
                   value={adminSearch}
                   onChange={(e) => setAdminSearch(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-indigo-500 focus:bg-white text-slate-700 font-medium"
@@ -566,12 +569,25 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
               </select>
             </div>
 
-            <button
-              onClick={handleOpenAddTeacher}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Register New Teacher
-            </button>
+            <div className="flex items-center gap-2">
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('id-cards', { type: 'staff' })}
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-indigo-200 text-indigo-700 font-bold text-xs transition-all shadow-xs cursor-pointer"
+                  title="Open ID Card Generator for Staff Badges"
+                >
+                  <IdCard className="w-4 h-4 text-indigo-600" />
+                  <span>Staff ID Badges</span>
+                </button>
+              )}
+              <button
+                onClick={handleOpenAddTeacher}
+                className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Register New Teacher
+              </button>
+            </div>
           </div>
 
           {/* Teacher directory grid */}
@@ -611,6 +627,36 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                               </span>
                             )}
                           </div>
+                          
+                          {/* Staff ID and Copy Button */}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-indigo-700 border border-slate-200">
+                              {teacher.staffId || `STF-2021-00${teacher.id.replace('t', '')}`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const idToCopy = teacher.staffId || `STF-2021-00${teacher.id.replace('t', '')}`;
+                                navigator.clipboard.writeText(idToCopy);
+                                setCopiedStaffId(teacher.id);
+                                setTimeout(() => setCopiedStaffId(null), 2000);
+                              }}
+                              className="text-slate-400 hover:text-indigo-600 p-0.5 rounded cursor-pointer transition-colors"
+                              title="Copy Staff ID"
+                            >
+                              {copiedStaffId === teacher.id ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                            {teacher.department && (
+                              <span className="text-[10px] text-slate-400">
+                                • {teacher.department}
+                              </span>
+                            )}
+                          </div>
+
                           <span className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
                             <Calendar className="w-3 h-3" /> Hired: {teacher.hireDate}
                           </span>
@@ -693,6 +739,18 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                           <Lock className="w-3 h-3 text-slate-400" />
                           <span>{(teacher.verified || teacher.isVerified) ? 'Verified' : 'Unverified'}</span>
                         </div>
+                      )}
+
+                      {onNavigate && (
+                        <button
+                          type="button"
+                          onClick={() => onNavigate('id-cards', { type: 'staff', id: teacher.id })}
+                          className="flex items-center gap-1 py-1.5 px-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/60 text-[10px] font-bold transition-all cursor-pointer"
+                          title="Generate & Print Staff ID Badge"
+                        >
+                          <IdCard className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Badge</span>
+                        </button>
                       )}
 
                       <button
@@ -1018,7 +1076,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Assigned Class Levels</label>
                 <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200/50 max-h-[120px] overflow-y-auto">
-                  {ALL_CLASSES_LIST.map(cls => (
+                  {CLASSES_LIST.map(cls => (
                     <label key={cls} className="flex items-center gap-2 text-xs text-slate-600 font-medium cursor-pointer">
                       <input
                         type="checkbox"
