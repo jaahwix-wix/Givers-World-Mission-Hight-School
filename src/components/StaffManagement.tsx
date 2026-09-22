@@ -35,11 +35,13 @@ import {
   Paperclip,
   IdCard,
   Copy,
-  Check
+  Check,
+  KeyRound
 } from 'lucide-react';
 import { StudentClass, Teacher, Assignment, Submission } from '../types';
 import { CLASSES_LIST } from '../constants';
 import PrincipalsNoticeBanner from './PrincipalsNoticeBanner';
+import { ensureTeacherAccessCode, generateTeacherCode } from '../utils/codeGenerator';
 import { 
   DEFAULT_SAMPLE_TEACHERS, 
   DEFAULT_SAMPLE_ASSIGNMENTS, 
@@ -58,6 +60,7 @@ export default function StaffManagement({ students, onNavigate }: StaffManagemen
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [copiedStaffId, setCopiedStaffId] = useState<string | null>(null);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   // Navigation: "admin" vs "portal"
   const [viewMode, setViewMode] = useState<'admin' | 'portal'>('admin');
@@ -122,7 +125,11 @@ export default function StaffManagement({ students, onNavigate }: StaffManagemen
       } else {
         localStorage.setItem('sma_teachers', JSON.stringify([]));
       }
-      setTeachers(loadedTeachers);
+      const sanitizedTeachers = loadedTeachers.map(ensureTeacherAccessCode);
+      setTeachers(sanitizedTeachers);
+      if (JSON.stringify(sanitizedTeachers) !== JSON.stringify(loadedTeachers)) {
+        localStorage.setItem('sma_teachers', JSON.stringify(sanitizedTeachers));
+      }
 
       if (!selectedTeacherId && loadedTeachers.length > 0) {
         setSelectedTeacherId(loadedTeachers[0].id);
@@ -336,6 +343,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
         name: formName,
         email: formEmail,
         phone: formPhone,
+        accessCode: editingTeacher.accessCode || generateTeacherCode(),
         subjects: subList,
         classes: formClasses,
         salary: formSalary,
@@ -355,6 +363,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
         name: formName,
         email: formEmail,
         phone: formPhone,
+        accessCode: generateTeacherCode(),
         subjects: subList,
         classes: formClasses,
         salary: formSalary,
@@ -629,7 +638,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                           </div>
                           
                           {/* Staff ID and Copy Button */}
-                          <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                             <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-indigo-700 border border-slate-200">
                               {teacher.staffId || `STF-2021-00${teacher.id.replace('t', '')}`}
                             </span>
@@ -650,6 +659,31 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                                 <Copy className="w-3 h-3" />
                               )}
                             </button>
+
+                            {/* System-Generated Portal Access Code */}
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                              <KeyRound className="w-2.5 h-2.5 text-emerald-600" />
+                              Code: {teacher.accessCode || 'Pending'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (teacher.accessCode) {
+                                  navigator.clipboard.writeText(teacher.accessCode);
+                                  setCopiedCodeId(teacher.id);
+                                  setTimeout(() => setCopiedCodeId(null), 2000);
+                                }
+                              }}
+                              className="text-slate-400 hover:text-emerald-700 p-0.5 rounded cursor-pointer transition-colors"
+                              title="Copy Portal Access Code"
+                            >
+                              {copiedCodeId === teacher.id ? (
+                                <Check className="w-3 h-3 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+
                             {teacher.department && (
                               <span className="text-[10px] text-slate-400">
                                 • {teacher.department}
@@ -1024,6 +1058,22 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
             </div>
 
             <form onSubmit={handleTeacherSubmit} className="p-5 space-y-4 max-h-[500px] overflow-y-auto">
+              {/* Access Code Notice */}
+              <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider block">Teacher Portal Access Code</span>
+                    <span className="text-xs font-mono font-bold text-emerald-900">
+                      {editingTeacher?.accessCode || 'Automatically generated by system upon save (e.g. TCH-XXXX)'}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-extrabold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200">
+                  Auto Issued
+                </span>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Full Name</label>
                 <input

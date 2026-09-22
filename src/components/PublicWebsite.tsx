@@ -53,6 +53,9 @@ export default function PublicWebsite({ onEnterPortal, students = [] }: PublicWe
   };
 
   const handleLoginSuccess = (role: UserRole, studentAdmissionNumber?: string) => {
+    if (studentAdmissionNumber) {
+      localStorage.setItem('sma_active_portal_student', studentAdmissionNumber);
+    }
     unlockSession(role);
     switchRole(role);
     if (role === 'student_parent') {
@@ -132,6 +135,7 @@ export default function PublicWebsite({ onEnterPortal, students = [] }: PublicWe
               <PortalLoginPage 
                 onLoginSuccess={handleLoginSuccess}
                 onNavigateHome={() => handleNavigate('home')}
+                students={students}
               />
             )}
           </PageTransition>

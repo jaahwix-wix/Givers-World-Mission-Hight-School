@@ -30,7 +30,8 @@ import {
   Download,
   CheckCircle2,
   Clock,
-  Sparkles
+  Sparkles,
+  ShieldCheck
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Student, StudentAcademicRecord, StudentFeeLedger, StudentClass } from '../types';
@@ -48,7 +49,19 @@ export default function StudentPortal({ students, records, fees }: StudentPortal
   // Login State
   const [admissionInput, setAdmissionInput] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [loggedInStudent, setLoggedInStudent] = useState<Student | null>(null);
+  const [loggedInStudent, setLoggedInStudent] = useState<Student | null>(() => {
+    const activeAdmission = localStorage.getItem('sma_active_portal_student');
+    if (activeAdmission) {
+      const clean = activeAdmission.trim().toUpperCase();
+      const found = students.find(
+        s => s.admissionNumber.trim().toUpperCase() === clean ||
+             (s.studentAccessCode && s.studentAccessCode.trim().toUpperCase() === clean) ||
+             (s.parentAccessCode && s.parentAccessCode.trim().toUpperCase() === clean)
+      );
+      if (found) return found;
+    }
+    return null;
+  });
   
   // Active Tab inside Portal
   const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'financials' | 'assignments' | 'attendance_qr'>('overview');
@@ -207,10 +220,18 @@ Submit your solutions via the Givers World Mission High School Student Portal.
   // Academics selector
   const [selectedTerm, setSelectedTerm] = useState<1 | 2 | 3>(3);
   
-  // Quick login handler
-  const handleLogin = (admissionNumber: string) => {
+  // Login handler supporting Admission Number, Student Access Code, and Parent Access Code
+  const handleLogin = (rawInput: string) => {
+    const clean = rawInput.trim().toUpperCase();
+    if (!clean) {
+      setErrorMessage('Please enter your Student Admission Number or Parent Access Code.');
+      return;
+    }
+
     const found = students.find(
-      s => s.admissionNumber.trim().toLowerCase() === admissionNumber.trim().toLowerCase()
+      s => s.admissionNumber.trim().toUpperCase() === clean ||
+           (s.studentAccessCode && s.studentAccessCode.trim().toUpperCase() === clean) ||
+           (s.parentAccessCode && s.parentAccessCode.trim().toUpperCase() === clean)
     );
     
     if (found) {
@@ -218,22 +239,21 @@ Submit your solutions via the Givers World Mission High School Student Portal.
         setErrorMessage('This student record is no longer active.');
         return;
       }
+      localStorage.setItem('sma_active_portal_student', found.admissionNumber);
       setLoggedInStudent(found);
       setErrorMessage(null);
       setActiveTab('overview');
     } else {
-      setErrorMessage('Admission Number not found. Please try again or use the quick access links.');
+      setErrorMessage('Access credential not recognized. Please enter a valid Admission Number or system-generated Parent Access Code.');
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('sma_active_portal_student');
     setLoggedInStudent(null);
     setAdmissionInput('');
     setErrorMessage(null);
   };
-
-  // Pre-filtered quick logins for convenience in testing
-  const activeStudents = students.filter(s => s.status === 'Active').slice(0, 4);
 
   // If NOT logged in, show elegant Login Gate
   if (!loggedInStudent) {
@@ -256,8 +276,8 @@ Submit your solutions via the Givers World Mission High School Student Portal.
             className="w-16 h-16 object-contain rounded-2xl bg-white p-1 border border-slate-200 shadow-sm mx-auto"
             referrerPolicy="no-referrer"
           />
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Student Access Portal</h2>
-          <p className="text-xs text-slate-400">Enter your admission identifier to view academic and fee ledgers</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Student & Parent Portal</h2>
+          <p className="text-xs text-slate-400">Enter your admission identifier or Parent Access Code</p>
         </div>
 
         <form 
@@ -268,12 +288,12 @@ Submit your solutions via the Givers World Mission High School Student Portal.
           className="space-y-4"
         >
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Admission ID Number</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Admission Number or Parent Code</label>
             <input 
               type="text" 
               value={admissionInput}
               onChange={(e) => setAdmissionInput(e.target.value)}
-              placeholder="e.g. SMA-2023-0142"
+              placeholder="e.g. GWM/2026/001 or PAR-3921"
               className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 text-slate-700 placeholder-slate-400 font-mono uppercase font-bold"
               required
             />
@@ -294,30 +314,16 @@ Submit your solutions via the Givers World Mission High School Student Portal.
           </button>
         </form>
 
-        {/* Demo Fast Login Directory */}
+        {/* Institutional Privacy & Security Notice */}
         <div className="mt-8 pt-6 border-t border-slate-100 space-y-3">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block text-center">
-            Sandbox Fast Access Links
-          </span>
-          <div className="grid grid-cols-1 gap-2">
-            {activeStudents.map(student => (
-              <button
-                key={student.id}
-                onClick={() => {
-                  setAdmissionInput(student.admissionNumber);
-                  handleLogin(student.admissionNumber);
-                }}
-                className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/40 rounded-xl text-xs text-left transition-colors cursor-pointer group"
-              >
-                <div>
-                  <p className="font-bold text-slate-700 group-hover:text-indigo-700">{student.name}</p>
-                  <p className="text-[10px] text-slate-400 font-mono">{student.admissionNumber} • {student.currentClass}</p>
-                </div>
-                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                  Auto login
-                </span>
-              </button>
-            ))}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1.5 text-center">
+            <div className="flex items-center justify-center gap-1.5 text-emerald-700 text-xs font-bold">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Institutional Privacy Standards</span>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Student files and academic transcripts are confidential. Parents and guardians must enter their system-generated Parent Access Code (e.g. <span className="font-mono font-bold text-slate-700">PAR-XXXX</span>) issued by the registry upon enrollment.
+            </p>
           </div>
         </div>
       </div>

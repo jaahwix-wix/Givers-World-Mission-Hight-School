@@ -271,9 +271,31 @@ export default function PhotoSyncModal({ isOpen, onClose }: PhotoSyncModalProps)
                     <p className="text-xs font-black text-slate-900 truncate mt-0.5">
                       {photo.title}
                     </p>
-                    <p className="text-[10px] font-mono text-slate-400 truncate">
-                      {photo.filename}
-                    </p>
+                    <div className="flex items-center justify-between gap-1 mt-1">
+                      <p className="text-[10px] font-mono text-slate-400 truncate">
+                        {photo.filename}
+                      </p>
+                      <label className="text-[10px] font-black text-emerald-700 hover:text-emerald-900 bg-emerald-100/70 hover:bg-emerald-200/80 px-2 py-0.5 rounded cursor-pointer transition-colors">
+                        Upload
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              try {
+                                const base64 = await readFileAsDataUrl(file);
+                                saveSchoolPhoto(photo.filename, base64);
+                                refreshSyncStatus();
+                              } catch (err) {
+                                console.error('Upload failed', err);
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
               );

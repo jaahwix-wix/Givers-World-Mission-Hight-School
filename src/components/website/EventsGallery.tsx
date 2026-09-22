@@ -26,6 +26,7 @@ import {
   getSchoolPhotoSrc, 
   isPhotoSynced, 
   onSchoolPhotosUpdated,
+  saveSchoolPhoto,
   getSyncedPhotosCount
 } from '../../utils/photoManager';
 import PhotoSyncModal from './PhotoSyncModal';
@@ -35,6 +36,7 @@ export default function EventsGallery() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [syncedCount, setSyncedCount] = useState(0);
+  const singleFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const categories = [
     'All',

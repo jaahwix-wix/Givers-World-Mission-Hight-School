@@ -260,24 +260,20 @@ export interface GradeScale {
   color: string;
 }
 
-export const WAEC_GRADING_SCALE: GradeScale[] = [
-  { minScore: 75, grade: 'A1', remark: 'Excellent', isCredit: true, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  { minScore: 70, grade: 'B2', remark: 'Very Good', isCredit: true, color: 'text-teal-600 bg-teal-50 border-teal-200' },
-  { minScore: 65, grade: 'B3', remark: 'Good', isCredit: true, color: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
-  { minScore: 60, grade: 'C4', remark: 'Credit', isCredit: true, color: 'text-sky-600 bg-sky-50 border-sky-200' },
-  { minScore: 55, grade: 'C5', remark: 'Credit', isCredit: true, color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },
-  { minScore: 50, grade: 'C6', remark: 'Credit', isCredit: true, color: 'text-blue-600 bg-blue-50 border-blue-200' },
-  { minScore: 45, grade: 'D7', remark: 'Pass', isCredit: false, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-  { minScore: 40, grade: 'E8', remark: 'Pass', isCredit: false, color: 'text-orange-600 bg-orange-50 border-orange-200' },
-  { minScore: 0, grade: 'F9', remark: 'Fail', isCredit: false, color: 'text-rose-600 bg-rose-50 border-rose-200' }
+export const SECONDARY_GRADING_SCALE: GradeScale[] = [
+  { minScore: 91, grade: 'A', remark: 'Excellent', isCredit: true, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  { minScore: 81, grade: 'B', remark: 'Very Good', isCredit: true, color: 'text-teal-600 bg-teal-50 border-teal-200' },
+  { minScore: 75, grade: 'C', remark: 'Credit', isCredit: true, color: 'text-sky-600 bg-sky-50 border-sky-200' },
+  { minScore: 0, grade: 'F', remark: 'Fail', isCredit: false, color: 'text-rose-600 bg-rose-50 border-rose-200' }
 ];
 
+export const WAEC_GRADING_SCALE = SECONDARY_GRADING_SCALE;
+
 export const PRIMARY_GRADING_SCALE: GradeScale[] = [
-  { minScore: 80, grade: 'A', remark: 'Excellent', isCredit: true, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-  { minScore: 70, grade: 'B', remark: 'Very Good', isCredit: true, color: 'text-teal-600 bg-teal-50 border-teal-200' },
-  { minScore: 60, grade: 'C', remark: 'Good', isCredit: true, color: 'text-sky-600 bg-sky-50 border-sky-200' },
-  { minScore: 50, grade: 'D', remark: 'Satisfactory', isCredit: false, color: 'text-amber-600 bg-amber-50 border-amber-200' },
-  { minScore: 0, grade: 'E', remark: 'Needs Improvement', isCredit: false, color: 'text-rose-600 bg-rose-50 border-rose-200' }
+  { minScore: 91, grade: 'A', remark: 'Excellent', isCredit: true, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  { minScore: 81, grade: 'B', remark: 'Very Good', isCredit: true, color: 'text-teal-600 bg-teal-50 border-teal-200' },
+  { minScore: 65, grade: 'C', remark: 'Credit', isCredit: true, color: 'text-sky-600 bg-sky-50 border-sky-200' },
+  { minScore: 0, grade: 'F', remark: 'Fail', isCredit: false, color: 'text-rose-600 bg-rose-50 border-rose-200' }
 ];
 
 export const UNIVERSITY_GRADING_SCALE: GradeScale[] = [
@@ -302,7 +298,7 @@ export function getGradingScale(className: StudentClass): GradeScale[] {
   ) {
     return PRIMARY_GRADING_SCALE;
   }
-  return WAEC_GRADING_SCALE;
+  return SECONDARY_GRADING_SCALE;
 }
 
 export function calculateGrade(score: number, className: StudentClass): { grade: string; remark: string; color: string } {
@@ -311,17 +307,5 @@ export function calculateGrade(score: number, className: StudentClass): { grade:
   if (matched) {
     return { grade: matched.grade, remark: matched.remark, color: matched.color };
   }
-  if (className.startsWith('University')) {
-    return { grade: 'F', remark: 'Fail (GPA 0.0)', color: 'text-rose-600 bg-rose-50 border-rose-200' };
-  }
-  if (
-    className.startsWith('Pre') || 
-    className.startsWith('Prep') || 
-    className.startsWith('Nursery') || 
-    className.startsWith('Primary') || 
-    className.startsWith('Class')
-  ) {
-    return { grade: 'E', remark: 'Needs Improvement', color: 'text-rose-600 bg-rose-50 border-rose-200' };
-  }
-  return { grade: 'F9', remark: 'Fail', color: 'text-rose-600 bg-rose-50 border-rose-200' };
+  return { grade: 'F', remark: 'Fail', color: 'text-rose-600 bg-rose-50 border-rose-200' };
 }

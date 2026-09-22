@@ -158,8 +158,10 @@ export default function HomeSlideshow({ onNavigate }: HomeSlideshowProps) {
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover object-center transform scale-100 transition-transform duration-7000 ease-out"
               onError={(e) => {
-                // Keep the deep dark background if image is pending
-                (e.target as HTMLElement).style.opacity = '0.3';
+                const img = e.target as HTMLImageElement;
+                if (!img.src.includes('IMG-20260918-WA0027.jpg')) {
+                  img.src = '/school-photos/IMG-20260918-WA0027.jpg';
+                }
               }}
             />
             

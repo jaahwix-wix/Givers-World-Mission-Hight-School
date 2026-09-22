@@ -40,6 +40,8 @@ export interface Student {
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   emergencyContactRelation?: string;
+  parentAccessCode?: string; // Auto-generated code for Parent Portal access (e.g. PAR-8492)
+  studentAccessCode?: string; // Auto-generated code for Student Portal access
   verified?: boolean;
   verifiedBy?: string;
   verifiedAt?: string;
@@ -170,6 +172,7 @@ export interface Teacher {
   salary: number;
   hireDate: string;
   payrollStatus: 'Paid' | 'Pending' | 'Unpaid';
+  accessCode?: string; // Auto-generated code for Teacher Portal access (e.g. TCH-3918)
   avatarColor?: string;
   verified?: boolean;
   verifiedBy?: string;

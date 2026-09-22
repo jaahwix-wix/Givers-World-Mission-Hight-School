@@ -17,7 +17,8 @@ import {
   doc, 
   getDocFromServer,
   setDoc,
-  getDoc
+  getDoc,
+  initializeFirestore
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { UserRole, RolePrivileges, AuthUser } from './types';
@@ -25,8 +26,15 @@ import { UserRole, RolePrivileges, AuthUser } from './types';
 // Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 
-// CRITICAL: Firestore must be initialized with the database ID from config
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// CRITICAL: Firestore must be initialized with the database ID from config.
+// Using experimentalForceLongPolling eliminates WebChannel streaming timeout and proxy buffering drops
+// common in browser sandboxes, iframes, and corporate proxies.
+export const db = typeof window !== 'undefined'
+  ? initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+    }, firebaseConfig.firestoreDatabaseId)
+  : getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
@@ -241,12 +249,22 @@ export async function testFirestoreConnection(): Promise<boolean> {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
     return true;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase connection test: client offline or network timeout.');
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    if (
+      err?.code === 'unavailable' ||
+      err?.code === 'deadline-exceeded' ||
+      (typeof err?.message === 'string' && (
+        err.message.includes('the client is offline') ||
+        err.message.includes('unavailable') ||
+        err.message.includes('could not be completed') ||
+        err.message.includes('Could not reach Cloud Firestore')
+      ))
+    ) {
+      console.warn('Firebase connection test: client offline or network unreachable. The client operates in offline mode.');
       return false;
     }
-    // Any permission-denied or non-offline error indicates successful server communication
+    // Any permission-denied indicates successful connection to the backend and rules evaluation
     return true;
   }
 }
