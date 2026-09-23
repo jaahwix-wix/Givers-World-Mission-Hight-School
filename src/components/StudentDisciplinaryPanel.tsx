@@ -20,6 +20,7 @@ import {
   FileText 
 } from 'lucide-react';
 import { Student } from '../types';
+import { syncFirestoreCollection, batchSaveToFirestore, deleteFromFirestore } from '../services/firestoreSync';
 
 interface StudentDisciplinaryPanelProps {
   students: Student[];
@@ -60,29 +61,32 @@ export default function StudentDisciplinaryPanel({ students }: StudentDisciplina
   const [formIssuer, setFormIssuer] = useState('');
 
   useEffect(() => {
-    const loadIncidents = () => {
-      const cached = localStorage.getItem('sma_incidents');
-      if (cached) {
-        setIncidents(JSON.parse(cached));
-      } else {
-        setIncidents(DEFAULT_INCIDENTS);
-        localStorage.setItem('sma_incidents', JSON.stringify(DEFAULT_INCIDENTS));
-      }
+    const unsub = syncFirestoreCollection<IncidentRecord>(
+      'incidents',
+      'sma_incidents',
+      (items) => setIncidents(items),
+      DEFAULT_INCIDENTS
+    );
+
+    const handleWiped = () => {
+      setIncidents([]);
     };
 
-    loadIncidents();
-    window.addEventListener('sma_database_wiped', loadIncidents);
-    window.addEventListener('storage', loadIncidents);
+    window.addEventListener('sma_database_wiped', handleWiped);
+
     return () => {
-      window.removeEventListener('sma_database_wiped', loadIncidents);
-      window.removeEventListener('storage', loadIncidents);
+      unsub();
+      window.removeEventListener('sma_database_wiped', handleWiped);
     };
   }, []);
 
   // Save Helper
   const saveIncidents = (newIncidents: IncidentRecord[]) => {
     setIncidents(newIncidents);
-    localStorage.setItem('sma_incidents', JSON.stringify(newIncidents));
+    try {
+      localStorage.setItem('sma_incidents', JSON.stringify(newIncidents));
+    } catch {}
+    batchSaveToFirestore('incidents', newIncidents);
   };
 
   const handleOpenModal = () => {
@@ -123,6 +127,7 @@ export default function StudentDisciplinaryPanel({ students }: StudentDisciplina
     if (window.confirm('Are you sure you want to delete this incident record?')) {
       const updated = incidents.filter(i => i.id !== id);
       saveIncidents(updated);
+      deleteFromFirestore('incidents', id);
     }
   };
 

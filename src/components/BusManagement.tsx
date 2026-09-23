@@ -24,6 +24,12 @@ import {
 } from 'lucide-react';
 import { Student, StudentClass } from '../types';
 import { CLASSES_LIST } from '../constants';
+import { 
+  syncFirestoreCollection, 
+  batchSaveToFirestore, 
+  saveToFirestore, 
+  deleteFromFirestore 
+} from '../services/firestoreSync';
 
 interface BusManagementProps {
   students: Student[];
@@ -67,45 +73,58 @@ export default function BusManagement({ students }: BusManagementProps) {
   const [formCapacity, setFormCapacity] = useState(30);
   const [formStatus, setFormStatus] = useState<SchoolBus['status']>('Idle');
 
-  // Load state from local storage or set defaults
+  // Load state from Cloud Firestore or local storage
   useEffect(() => {
-    const loadBusData = () => {
-      const cachedBuses = localStorage.getItem('sma_buses');
-      const cachedAssignments = localStorage.getItem('sma_bus_assignments');
-      
-      if (cachedBuses) {
-        setBuses(JSON.parse(cachedBuses));
-      } else {
-        setBuses(DEFAULT_BUSES);
-        localStorage.setItem('sma_buses', JSON.stringify(DEFAULT_BUSES));
-      }
+    const unsubBuses = syncFirestoreCollection<SchoolBus>(
+      'buses',
+      'sma_buses',
+      (items) => setBuses(items),
+      DEFAULT_BUSES
+    );
 
-      if (cachedAssignments) {
-        setAssignments(JSON.parse(cachedAssignments));
-      } else {
-        setAssignments({});
-        localStorage.setItem('sma_bus_assignments', JSON.stringify({}));
-      }
+    // Load bus assignments
+    const loadAssignments = () => {
+      try {
+        const cached = localStorage.getItem('sma_bus_assignments');
+        if (cached) {
+          setAssignments(JSON.parse(cached));
+        }
+      } catch {}
+    };
+    loadAssignments();
+
+    const handleWiped = () => {
+      setBuses([]);
+      setAssignments({});
     };
 
-    loadBusData();
-    window.addEventListener('sma_database_wiped', loadBusData);
-    window.addEventListener('storage', loadBusData);
+    window.addEventListener('sma_database_wiped', handleWiped);
+
     return () => {
-      window.removeEventListener('sma_database_wiped', loadBusData);
-      window.removeEventListener('storage', loadBusData);
+      unsubBuses();
+      window.removeEventListener('sma_database_wiped', handleWiped);
     };
-  }, [students]);
+  }, []);
 
   // Save changes helper
   const saveBuses = (updatedBuses: SchoolBus[]) => {
     setBuses(updatedBuses);
-    localStorage.setItem('sma_buses', JSON.stringify(updatedBuses));
+    try {
+      localStorage.setItem('sma_buses', JSON.stringify(updatedBuses));
+    } catch {}
+    batchSaveToFirestore('buses', updatedBuses);
   };
 
   const saveAssignments = (updatedAssignments: Record<string, string>) => {
     setAssignments(updatedAssignments);
-    localStorage.setItem('sma_bus_assignments', JSON.stringify(updatedAssignments));
+    try {
+      localStorage.setItem('sma_bus_assignments', JSON.stringify(updatedAssignments));
+    } catch {}
+    saveToFirestore('bus_assignments', 'active_allocations', {
+      id: 'active_allocations',
+      assignments: updatedAssignments,
+      updatedAt: new Date().toISOString()
+    });
   };
 
   // Bus Modal handlers
@@ -169,6 +188,7 @@ export default function BusManagement({ students }: BusManagementProps) {
     if (window.confirm('Are you sure you want to delete this school bus? This will unassign all students.')) {
       const updatedBuses = buses.filter(b => b.id !== id);
       saveBuses(updatedBuses);
+      deleteFromFirestore('buses', id);
       
       // Remove assignments
       const updatedAssignments = { ...assignments };

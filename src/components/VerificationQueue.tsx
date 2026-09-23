@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Student, Teacher } from '../types';
 import { SCHOOL_INFO } from '../initialData';
+import { syncFirestoreCollection, saveToFirestore, batchSaveToFirestore } from '../services/firestoreSync';
 
 interface VerificationQueueProps {
   students: Student[];
@@ -42,20 +43,14 @@ export default function VerificationQueue({ students, onUpdateStudent, onNavigat
   const [activeFilter, setActiveFilter] = useState<'all' | 'students' | 'staff'>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sync teachers from storage
+  // Sync teachers from Firestore & storage
   useEffect(() => {
-    const handleSync = () => {
-      const cached = localStorage.getItem('sma_teachers');
-      if (cached) {
-        try {
-          setTeachers(JSON.parse(cached));
-        } catch {
-          // ignore
-        }
-      }
-    };
-    window.addEventListener('storage', handleSync);
-    return () => window.removeEventListener('storage', handleSync);
+    const unsub = syncFirestoreCollection<Teacher>(
+      'teachers',
+      'sma_teachers',
+      (items) => setTeachers(items)
+    );
+    return () => unsub();
   }, []);
 
   const unverifiedStudents = students.filter(s => s.status === 'Active' && !s.verified);
@@ -73,6 +68,7 @@ export default function VerificationQueue({ students, onUpdateStudent, onNavigat
     if (onUpdateStudent) {
       onUpdateStudent(updated);
     } else {
+      saveToFirestore('students', updated.id, updated);
       const allStudentsCached = localStorage.getItem('sma_students');
       if (allStudentsCached) {
         try {
@@ -99,7 +95,15 @@ export default function VerificationQueue({ students, onUpdateStudent, onNavigat
     } : t);
 
     setTeachers(updated);
-    localStorage.setItem('sma_teachers', JSON.stringify(updated));
+    try {
+      localStorage.setItem('sma_teachers', JSON.stringify(updated));
+    } catch {}
+    saveToFirestore('teachers', teacher.id, {
+      ...teacher,
+      verified: true,
+      verifiedBy: `${SCHOOL_INFO.principalName} (Admin)`,
+      verifiedAt: new Date().toISOString().split('T')[0]
+    });
     window.dispatchEvent(new Event('storage'));
 
     setToastMessage(`Staff account for ${teacher.name} approved & verified.`);
@@ -122,7 +126,10 @@ export default function VerificationQueue({ students, onUpdateStudent, onNavigat
       verifiedAt: new Date().toISOString().split('T')[0]
     }));
     setTeachers(updated);
-    localStorage.setItem('sma_teachers', JSON.stringify(updated));
+    try {
+      localStorage.setItem('sma_teachers', JSON.stringify(updated));
+    } catch {}
+    batchSaveToFirestore('teachers', updated);
     window.dispatchEvent(new Event('storage'));
 
     setToastMessage(`All ${totalPending} pending accounts verified by ${SCHOOL_INFO.principalName}.`);

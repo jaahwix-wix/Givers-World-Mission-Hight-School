@@ -49,6 +49,12 @@ import {
   SCHOOL_INFO 
 } from '../initialData';
 import { useAuth } from '../context/AuthContext';
+import { 
+  syncFirestoreCollection, 
+  saveToFirestore, 
+  deleteFromFirestore, 
+  batchSaveToFirestore 
+} from '../services/firestoreSync';
 
 interface StaffManagementProps {
   students: any[];
@@ -108,81 +114,74 @@ export default function StaffManagement({ students, onNavigate }: StaffManagemen
   const [gradeScore, setGradeScore] = useState(0);
   const [gradeFeedback, setGradeFeedback] = useState('');
 
-  // Load States
+  // Load States from Cloud Firestore & LocalStorage
   useEffect(() => {
-    const loadStaffData = () => {
-      const cachedTeachers = localStorage.getItem('sma_teachers');
-      const cachedAssignments = localStorage.getItem('sma_assignments');
-      const cachedSubmissions = localStorage.getItem('sma_submissions');
-
-      let loadedTeachers: Teacher[] = [];
-      if (cachedTeachers) {
-        try {
-          loadedTeachers = JSON.parse(cachedTeachers);
-        } catch {
-          loadedTeachers = [];
+    const unsubTeachers = syncFirestoreCollection<Teacher>(
+      'teachers',
+      'sma_teachers',
+      (items) => {
+        const sanitized = items.map(ensureTeacherAccessCode);
+        setTeachers(sanitized);
+        if (!selectedTeacherId && sanitized.length > 0) {
+          setSelectedTeacherId(sanitized[0].id);
         }
-      } else {
-        localStorage.setItem('sma_teachers', JSON.stringify([]));
-      }
-      const sanitizedTeachers = loadedTeachers.map(ensureTeacherAccessCode);
-      setTeachers(sanitizedTeachers);
-      if (JSON.stringify(sanitizedTeachers) !== JSON.stringify(loadedTeachers)) {
-        localStorage.setItem('sma_teachers', JSON.stringify(sanitizedTeachers));
-      }
+      },
+      DEFAULT_SAMPLE_TEACHERS
+    );
 
-      if (!selectedTeacherId && loadedTeachers.length > 0) {
-        setSelectedTeacherId(loadedTeachers[0].id);
-      }
+    const unsubAssignments = syncFirestoreCollection<Assignment>(
+      'assignments',
+      'sma_assignments',
+      (items) => setAssignments(items),
+      DEFAULT_SAMPLE_ASSIGNMENTS
+    );
 
-      let loadedAssignments: Assignment[] = [];
-      if (cachedAssignments) {
-        try {
-          loadedAssignments = JSON.parse(cachedAssignments);
-        } catch {
-          loadedAssignments = [];
-        }
-      } else {
-        localStorage.setItem('sma_assignments', JSON.stringify([]));
-      }
-      setAssignments(loadedAssignments);
+    const unsubSubmissions = syncFirestoreCollection<Submission>(
+      'submissions',
+      'sma_submissions',
+      (items) => setSubmissions(items),
+      DEFAULT_SAMPLE_SUBMISSIONS
+    );
 
-      let loadedSubmissions: Submission[] = [];
-      if (cachedSubmissions) {
-        try {
-          loadedSubmissions = JSON.parse(cachedSubmissions);
-        } catch {
-          loadedSubmissions = [];
-        }
-      } else {
-        localStorage.setItem('sma_submissions', JSON.stringify([]));
-      }
-      setSubmissions(loadedSubmissions);
+    const handleWiped = () => {
+      setTeachers([]);
+      setAssignments([]);
+      setSubmissions([]);
     };
 
-    loadStaffData();
-    window.addEventListener('sma_database_wiped', loadStaffData);
-    window.addEventListener('storage', loadStaffData);
+    window.addEventListener('sma_database_wiped', handleWiped);
+
     return () => {
-      window.removeEventListener('sma_database_wiped', loadStaffData);
-      window.removeEventListener('storage', loadStaffData);
+      unsubTeachers();
+      unsubAssignments();
+      unsubSubmissions();
+      window.removeEventListener('sma_database_wiped', handleWiped);
     };
   }, []);
 
-  // Save Helpers
+  // Save Helpers with Cloud Firestore Persistence
   const saveTeachers = (newTeachers: Teacher[]) => {
     setTeachers(newTeachers);
-    localStorage.setItem('sma_teachers', JSON.stringify(newTeachers));
+    try {
+      localStorage.setItem('sma_teachers', JSON.stringify(newTeachers));
+    } catch {}
+    batchSaveToFirestore('teachers', newTeachers);
   };
 
   const saveAssignments = (newAssigns: Assignment[]) => {
     setAssignments(newAssigns);
-    localStorage.setItem('sma_assignments', JSON.stringify(newAssigns));
+    try {
+      localStorage.setItem('sma_assignments', JSON.stringify(newAssigns));
+    } catch {}
+    batchSaveToFirestore('assignments', newAssigns);
   };
 
   const saveSubmissions = (newSubs: Submission[]) => {
     setSubmissions(newSubs);
-    localStorage.setItem('sma_submissions', JSON.stringify(newSubs));
+    try {
+      localStorage.setItem('sma_submissions', JSON.stringify(newSubs));
+    } catch {}
+    batchSaveToFirestore('submissions', newSubs);
   };
 
   // Toggle Staff Verification (Admin Only)
@@ -383,6 +382,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
     if (window.confirm('Are you sure you want to delete this staff record?')) {
       const updated = teachers.filter(t => t.id !== id);
       saveTeachers(updated);
+      deleteFromFirestore('teachers', id);
     }
   };
 
@@ -443,8 +443,11 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
     if (window.confirm('Are you sure you want to delete this assignment?')) {
       const updated = assignments.filter(a => a.id !== id);
       saveAssignments(updated);
+      deleteFromFirestore('assignments', id);
       
       // Also delete corresponding submissions
+      const subsToDelete = submissions.filter(s => s.assignmentId === id);
+      subsToDelete.forEach(sub => deleteFromFirestore('submissions', sub.id));
       const updatedSubs = submissions.filter(s => s.assignmentId !== id);
       saveSubmissions(updatedSubs);
     }

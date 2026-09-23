@@ -39,6 +39,13 @@ import {
   SCHOOL_INFO 
 } from './initialData';
 import { wipeAllSystemData, loadSampleDemoData } from './utils/dataStore';
+import { 
+  syncFirestoreCollection, 
+  saveToFirestore, 
+  deleteFromFirestore, 
+  batchSaveToFirestore, 
+  clearFirestoreCollection 
+} from './services/firestoreSync';
 
 // Component Imports
 import Dashboard from './components/Dashboard';
@@ -136,67 +143,74 @@ export default function App() {
     }
   }, [role]);
 
-  // 1. Initial Load: Sync with LocalStorage or set clean live production state
+  // 1. Real-time Cloud Firestore & LocalStorage Synchronization
   useEffect(() => {
-    const GO_LIVE_VERSION_KEY = 'sma_live_go_live_cleared_v5';
+    // Realtime Sync for Students
+    const unsubStudents = syncFirestoreCollection<Student>(
+      'students',
+      'sma_students',
+      (items) => setStudents(items),
+      INITIAL_STUDENTS
+    );
 
-    // If migrating to live production, wipe all previous mock/demo data
-    if (localStorage.getItem(GO_LIVE_VERSION_KEY) !== 'true') {
-      wipeAllSystemData();
-      localStorage.setItem(GO_LIVE_VERSION_KEY, 'true');
+    // Realtime Sync for Academic Records
+    const unsubRecords = syncFirestoreCollection<StudentAcademicRecord>(
+      'academic_records',
+      'sma_academic_records',
+      (items) => setRecords(items),
+      INITIAL_ACADEMIC_RECORDS
+    );
+
+    // Realtime Sync for National Exam Preps
+    const unsubPreps = syncFirestoreCollection<NationalExamPrep>(
+      'exam_preps',
+      'sma_exam_preps',
+      (items) => setExamPreps(items),
+      INITIAL_NATIONAL_EXAMS
+    );
+
+    // Realtime Sync for Fee Ledgers
+    const unsubFees = syncFirestoreCollection<StudentFeeLedger>(
+      'fee_ledgers',
+      'sma_fee_ledgers',
+      (items) => setFees(items),
+      INITIAL_FEE_LEDGERS
+    );
+
+    const handleLocalWipe = () => {
       setStudents([]);
       setRecords([]);
       setExamPreps([]);
       setFees([]);
-      return;
-    }
-
-    const loadData = () => {
-      const cachedStudents = localStorage.getItem('sma_students');
-      const cachedRecords = localStorage.getItem('sma_academic_records');
-      const cachedExamPreps = localStorage.getItem('sma_exam_preps');
-      const cachedFees = localStorage.getItem('sma_fee_ledgers');
-
-      if (cachedStudents && cachedRecords && cachedExamPreps && cachedFees) {
-        setStudents(JSON.parse(cachedStudents));
-        setRecords(JSON.parse(cachedRecords));
-        setExamPreps(JSON.parse(cachedExamPreps));
-        setFees(JSON.parse(cachedFees));
-      } else {
-        // Initialize clean state for production
-        setStudents(INITIAL_STUDENTS);
-        setRecords(INITIAL_ACADEMIC_RECORDS);
-        setExamPreps(INITIAL_NATIONAL_EXAMS);
-        setFees(INITIAL_FEE_LEDGERS);
-        
-        localStorage.setItem('sma_students', JSON.stringify(INITIAL_STUDENTS));
-        localStorage.setItem('sma_academic_records', JSON.stringify(INITIAL_ACADEMIC_RECORDS));
-        localStorage.setItem('sma_exam_preps', JSON.stringify(INITIAL_NATIONAL_EXAMS));
-        localStorage.setItem('sma_fee_ledgers', JSON.stringify(INITIAL_FEE_LEDGERS));
-      }
     };
 
-    loadData();
-    window.addEventListener('sma_database_wiped', loadData);
-    window.addEventListener('sma_database_loaded_demo', loadData);
-    window.addEventListener('storage', loadData);
+    window.addEventListener('sma_database_wiped', handleLocalWipe);
+
     return () => {
-      window.removeEventListener('sma_database_wiped', loadData);
-      window.removeEventListener('sma_database_loaded_demo', loadData);
-      window.removeEventListener('storage', loadData);
+      unsubStudents();
+      unsubRecords();
+      unsubPreps();
+      unsubFees();
+      window.removeEventListener('sma_database_wiped', handleLocalWipe);
     };
   }, []);
 
-  // Helpers to persist state modifications
+  // Helpers to persist state modifications to local cache
   const saveStateToStorage = (key: string, data: any) => {
-    localStorage.setItem(key, JSON.stringify(data));
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.warn('Local storage write error:', e);
+    }
   };
 
-  // 2. Student CRUD Triggers & Referential Consistency
+  // 2. Student CRUD Triggers & Referential Consistency with Cloud Firestore
   const handleAddStudent = (newStudent: Student) => {
     const updatedStuds = [newStudent, ...students];
     setStudents(updatedStuds);
     saveStateToStorage('sma_students', updatedStuds);
+    // Persist to Cloud Firestore immediately
+    saveToFirestore('students', newStudent.id, newStudent);
 
     // Initialize blank terminal grades record
     const newRecord: StudentAcademicRecord = {
@@ -211,6 +225,7 @@ export default function App() {
     const updatedRecs = [newRecord, ...records];
     setRecords(updatedRecs);
     saveStateToStorage('sma_academic_records', updatedRecs);
+    saveToFirestore('academic_records', newStudent.id, newRecord);
 
     // Initialize tuition fee ledger depending on class levels
     let termFee = 2500;
@@ -229,12 +244,14 @@ export default function App() {
     const updatedFees = [newLedger, ...fees];
     setFees(updatedFees);
     saveStateToStorage('sma_fee_ledgers', updatedFees);
+    saveToFirestore('fee_ledgers', newStudent.id, newLedger);
   };
 
   const handleUpdateStudent = (updatedStudent: Student) => {
     const updatedStuds = students.map(s => s.id === updatedStudent.id ? updatedStudent : s);
     setStudents(updatedStuds);
     saveStateToStorage('sma_students', updatedStuds);
+    saveToFirestore('students', updatedStudent.id, updatedStudent);
 
     // Adjust fee ledgers if class tier changed (Prep/Primary to JSS or SSS)
     const original = students.find(s => s.id === updatedStudent.id);
@@ -243,6 +260,7 @@ export default function App() {
       if (updatedStudent.currentClass.startsWith('JSS')) termFee = 3500;
       if (updatedStudent.currentClass.startsWith('SSS')) termFee = 4500;
 
+      let changedLedger: StudentFeeLedger | null = null;
       const updatedFees = fees.map(f => {
         if (f.studentId === updatedStudent.id) {
           const updatedTerms = { ...f.terms };
@@ -253,12 +271,16 @@ export default function App() {
               ? 'Paid' 
               : (updatedTerms[t].paidAmount > 0 ? 'Partial' : 'Unpaid');
           });
-          return { ...f, terms: updatedTerms };
+          changedLedger = { ...f, terms: updatedTerms };
+          return changedLedger;
         }
         return f;
       });
       setFees(updatedFees);
       saveStateToStorage('sma_fee_ledgers', updatedFees);
+      if (changedLedger) {
+        saveToFirestore('fee_ledgers', updatedStudent.id, changedLedger);
+      }
     }
   };
 
@@ -266,19 +288,23 @@ export default function App() {
     const updatedStuds = students.filter(s => s.id !== id);
     setStudents(updatedStuds);
     saveStateToStorage('sma_students', updatedStuds);
+    deleteFromFirestore('students', id);
 
     // Cascade deletion of secondary records
     const updatedRecs = records.filter(r => r.studentId !== id);
     setRecords(updatedRecs);
     saveStateToStorage('sma_academic_records', updatedRecs);
+    deleteFromFirestore('academic_records', id);
 
     const updatedPreps = examPreps.filter(ep => ep.studentId !== id);
     setExamPreps(updatedPreps);
     saveStateToStorage('sma_exam_preps', updatedPreps);
+    deleteFromFirestore('exam_preps', id);
 
     const updatedFees = fees.filter(f => f.studentId !== id);
     setFees(updatedFees);
     saveStateToStorage('sma_fee_ledgers', updatedFees);
+    deleteFromFirestore('fee_ledgers', id);
   };
 
   // 3. Academic & Exams Updators
@@ -286,6 +312,7 @@ export default function App() {
     const updated = records.map(r => r.studentId === updatedRecord.studentId ? updatedRecord : r);
     setRecords(updated);
     saveStateToStorage('sma_academic_records', updated);
+    saveToFirestore('academic_records', updatedRecord.studentId, updatedRecord);
   };
 
   const handleUpdateExamPrep = (updatedExamPrep: NationalExamPrep) => {
@@ -298,6 +325,7 @@ export default function App() {
     }
     setExamPreps(updated);
     saveStateToStorage('sma_exam_preps', updated);
+    saveToFirestore('exam_preps', updatedExamPrep.studentId, updatedExamPrep);
   };
 
   // 4. Financial Updators (Adding transaction receipts)
@@ -307,6 +335,7 @@ export default function App() {
       id: `tx-${Date.now()}`
     };
 
+    let updatedLedgerToSave: StudentFeeLedger | null = null;
     const updatedFees = fees.map(ledger => {
       if (ledger.studentId === studentId) {
         const termData = ledger.terms[term];
@@ -314,7 +343,7 @@ export default function App() {
         const newBalance = Math.max(0, termData.totalDue - newPaid);
         const newStatus = newBalance <= 0 ? 'Paid' : (newPaid > 0 ? 'Partial' : 'Unpaid');
 
-        return {
+        const updatedLedger: StudentFeeLedger = {
           ...ledger,
           terms: {
             ...ledger.terms,
@@ -327,12 +356,17 @@ export default function App() {
             }
           }
         };
+        updatedLedgerToSave = updatedLedger;
+        return updatedLedger;
       }
       return ledger;
     });
 
     setFees(updatedFees);
     saveStateToStorage('sma_fee_ledgers', updatedFees);
+    if (updatedLedgerToSave) {
+      saveToFirestore('fee_ledgers', studentId, updatedLedgerToSave);
+    }
   };
 
   // 5. Restore Database from custom center
@@ -351,6 +385,11 @@ export default function App() {
     saveStateToStorage('sma_academic_records', data.records);
     saveStateToStorage('sma_exam_preps', data.examPreps);
     saveStateToStorage('sma_fee_ledgers', data.fees);
+
+    batchSaveToFirestore('students', data.students);
+    batchSaveToFirestore('academic_records', data.records, 'studentId');
+    batchSaveToFirestore('exam_preps', data.examPreps, 'studentId');
+    batchSaveToFirestore('fee_ledgers', data.fees, 'studentId');
   };
 
   const handleResetData = () => {
@@ -359,6 +398,11 @@ export default function App() {
     setRecords([]);
     setExamPreps([]);
     setFees([]);
+
+    clearFirestoreCollection('students');
+    clearFirestoreCollection('academic_records');
+    clearFirestoreCollection('exam_preps');
+    clearFirestoreCollection('fee_ledgers');
   };
 
   const handleLoadDemoData = () => {
@@ -367,6 +411,11 @@ export default function App() {
     setRecords(DEMO_SAMPLE_ACADEMIC_RECORDS);
     setExamPreps(DEMO_SAMPLE_NATIONAL_EXAMS);
     setFees(DEMO_SAMPLE_FEE_LEDGERS);
+
+    batchSaveToFirestore('students', DEMO_SAMPLE_STUDENTS);
+    batchSaveToFirestore('academic_records', DEMO_SAMPLE_ACADEMIC_RECORDS, 'studentId');
+    batchSaveToFirestore('exam_preps', DEMO_SAMPLE_NATIONAL_EXAMS, 'studentId');
+    batchSaveToFirestore('fee_ledgers', DEMO_SAMPLE_FEE_LEDGERS, 'studentId');
   };
 
   // Helper to deep route tabs and clear/set navigation params

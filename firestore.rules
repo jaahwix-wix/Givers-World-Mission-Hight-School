@@ -80,5 +80,63 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // Health / Connection Test
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // School Operational Collections (Students, Academic, Finances, Staff, Transport, Logistics)
+    match /students/{studentId} {
+      allow read, write: if true;
+    }
+
+    match /academic_records/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /fee_ledgers/{ledgerId} {
+      allow read, write: if true;
+    }
+
+    match /exam_preps/{prepId} {
+      allow read, write: if true;
+    }
+
+    match /teachers/{teacherId} {
+      allow read, write: if true;
+    }
+
+    match /assignments/{assignmentId} {
+      allow read, write: if true;
+    }
+
+    match /submissions/{submissionId} {
+      allow read, write: if true;
+    }
+
+    match /announcements/{announcementId} {
+      allow read, write: if true;
+    }
+
+    match /buses/{busId} {
+      allow read, write: if true;
+    }
+
+    match /bus_assignments/{assignmentId} {
+      allow read, write: if true;
+    }
+
+    match /daily_attendance/{recordId} {
+      allow read, write: if true;
+    }
+
+    match /incidents/{incidentId} {
+      allow read, write: if true;
+    }
+
+    match /system_settings/{settingId} {
+      allow read, write: if true;
+    }
   }
 }

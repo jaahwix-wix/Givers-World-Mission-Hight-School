@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Student, StudentClass } from '../types';
 import { CLASSES_LIST } from '../constants';
+import { syncFirestoreCollection, batchSaveToFirestore } from '../services/firestoreSync';
 
 interface StudentAttendancePanelProps {
   students: Student[];
@@ -49,26 +50,26 @@ export default function StudentAttendancePanel({ students }: StudentAttendancePa
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [isSavedMessage, setIsSavedMessage] = useState(false);
 
-  // Load attendance logs
+  // Load attendance logs with Cloud Firestore & local cache
   useEffect(() => {
-    const loadAttendanceData = () => {
-      const cachedRecords = localStorage.getItem('sma_daily_attendance');
-      if (cachedRecords) {
-        setAttendanceRecords(JSON.parse(cachedRecords));
-      } else {
-        setAttendanceRecords([]);
-        localStorage.setItem('sma_daily_attendance', JSON.stringify([]));
-      }
+    const unsub = syncFirestoreCollection<AttendanceRecord>(
+      'daily_attendance',
+      'sma_daily_attendance',
+      (records) => setAttendanceRecords(records),
+      []
+    );
+
+    const handleWiped = () => {
+      setAttendanceRecords([]);
     };
 
-    loadAttendanceData();
-    window.addEventListener('sma_database_wiped', loadAttendanceData);
-    window.addEventListener('storage', loadAttendanceData);
+    window.addEventListener('sma_database_wiped', handleWiped);
+
     return () => {
-      window.removeEventListener('sma_database_wiped', loadAttendanceData);
-      window.removeEventListener('storage', loadAttendanceData);
+      unsub();
+      window.removeEventListener('sma_database_wiped', handleWiped);
     };
-  }, [students]);
+  }, []);
 
   // Current date logging sheet state (holds temporary status changes before saving)
   const [currentLoggingSheet, setCurrentLoggingSheet] = useState<Record<string, 'Present' | 'Absent' | 'Late'>>({});
@@ -129,7 +130,10 @@ export default function StudentAttendancePanel({ students }: StudentAttendancePa
     });
 
     setAttendanceRecords(updatedRecords);
-    localStorage.setItem('sma_daily_attendance', JSON.stringify(updatedRecords));
+    try {
+      localStorage.setItem('sma_daily_attendance', JSON.stringify(updatedRecords));
+    } catch {}
+    batchSaveToFirestore('daily_attendance', updatedRecords);
     
     setIsSavedMessage(true);
     setTimeout(() => setIsSavedMessage(false), 3000);

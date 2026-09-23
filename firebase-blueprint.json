@@ -42,6 +42,45 @@
     "/admins/{userId}": {
       "schema": "UserProfile",
       "description": "Collection of designated system administrators"
+    },
+    "/students/{studentId}": {
+      "description": "Permanent student records, bio, enrollment, and access credentials"
+    },
+    "/academic_records/{recordId}": {
+      "description": "Student academic performance, term grades, remarks, and GPA"
+    },
+    "/fee_ledgers/{ledgerId}": {
+      "description": "Tuition fees, payments, balances, and receipt logs"
+    },
+    "/exam_preps/{prepId}": {
+      "description": "National exam preparation records (NPSE, BECE, WASSCE)"
+    },
+    "/teachers/{teacherId}": {
+      "description": "Teacher and staff directory, subject assignments, access codes"
+    },
+    "/assignments/{assignmentId}": {
+      "description": "Coursework and assignments created by faculty"
+    },
+    "/submissions/{submissionId}": {
+      "description": "Student assignment submissions"
+    },
+    "/announcements/{announcementId}": {
+      "description": "School notices, principal broadcasts, and alerts"
+    },
+    "/buses/{busId}": {
+      "description": "School transport bus fleet and route statuses"
+    },
+    "/bus_assignments/{assignmentId}": {
+      "description": "Student transport route assignments"
+    },
+    "/daily_attendance/{recordId}": {
+      "description": "Classroom daily attendance register records"
+    },
+    "/incidents/{incidentId}": {
+      "description": "Student disciplinary cases and counsel tracking"
+    },
+    "/system_settings/{settingId}": {
+      "description": "Institutional configuration, academic year, and term schedules"
     }
   }
 }
