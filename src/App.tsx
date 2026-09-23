@@ -44,7 +44,8 @@ import {
   saveToFirestore, 
   deleteFromFirestore, 
   batchSaveToFirestore, 
-  clearFirestoreCollection 
+  clearFirestoreCollection,
+  clearAllFirestoreSchoolData 
 } from './services/firestoreSync';
 
 // Component Imports
@@ -392,17 +393,14 @@ export default function App() {
     batchSaveToFirestore('fee_ledgers', data.fees, 'studentId');
   };
 
-  const handleResetData = () => {
+  const handleResetData = async () => {
     wipeAllSystemData();
     setStudents([]);
     setRecords([]);
     setExamPreps([]);
     setFees([]);
 
-    clearFirestoreCollection('students');
-    clearFirestoreCollection('academic_records');
-    clearFirestoreCollection('exam_preps');
-    clearFirestoreCollection('fee_ledgers');
+    await clearAllFirestoreSchoolData();
   };
 
   const handleLoadDemoData = () => {

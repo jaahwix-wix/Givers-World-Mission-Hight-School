@@ -86,7 +86,7 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // School Operational Collections (Students, Academic, Finances, Staff, Transport, Logistics)
+    // School Operational Collections (Students, Academic, Finances, Staff, Transport, Logistics, Library, Notices)
     match /students/{studentId} {
       allow read, write: if true;
     }
@@ -119,6 +119,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /class_notices/{noticeId} {
+      allow read, write: if true;
+    }
+
     match /buses/{busId} {
       allow read, write: if true;
     }
@@ -132,6 +136,14 @@ service cloud.firestore {
     }
 
     match /incidents/{incidentId} {
+      allow read, write: if true;
+    }
+
+    match /library_books/{bookId} {
+      allow read, write: if true;
+    }
+
+    match /library_checkouts/{checkoutId} {
       allow read, write: if true;
     }
 

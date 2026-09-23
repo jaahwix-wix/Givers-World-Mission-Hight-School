@@ -62,6 +62,29 @@ export default function StudentPortal({ students, records, fees }: StudentPortal
     }
     return null;
   });
+
+  // Re-synchronize logged-in student when Firestore collection delivers data
+  useEffect(() => {
+    if (!loggedInStudent && students.length > 0) {
+      const activeAdmission = localStorage.getItem('sma_active_portal_student');
+      if (activeAdmission) {
+        const clean = activeAdmission.trim().toUpperCase();
+        const found = students.find(
+          s => s.admissionNumber.trim().toUpperCase() === clean ||
+               (s.studentAccessCode && s.studentAccessCode.trim().toUpperCase() === clean) ||
+               (s.parentAccessCode && s.parentAccessCode.trim().toUpperCase() === clean)
+        );
+        if (found) {
+          setLoggedInStudent(found);
+        }
+      }
+    } else if (loggedInStudent) {
+      const fresh = students.find(s => s.id === loggedInStudent.id);
+      if (fresh && fresh !== loggedInStudent) {
+        setLoggedInStudent(fresh);
+      }
+    }
+  }, [students, loggedInStudent]);
   
   // Active Tab inside Portal
   const [activeTab, setActiveTab] = useState<'overview' | 'academics' | 'financials' | 'assignments' | 'attendance_qr'>('overview');

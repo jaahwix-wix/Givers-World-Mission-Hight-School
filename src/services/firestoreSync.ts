@@ -15,6 +15,68 @@ import {
 import { db } from '../firebase';
 
 /**
+ * Normalizes document IDs to ensure they do not contain slashes ('/')
+ * which Firestore interprets as subcollection path delimiters.
+ */
+export function cleanDocId(id: string): string {
+  if (!id) return `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  return String(id).replace(/[\/\s#\?\[\]]+/g, '_');
+}
+
+/**
+ * Compresses an image base64 data URL to ensure it never exceeds Firestore's 1MB limit.
+ */
+export async function compressImageBase64(
+  dataUrl: string, 
+  maxDim = 300, 
+  quality = 0.75
+): Promise<string> {
+  if (typeof window === 'undefined' || !dataUrl || !dataUrl.startsWith('data:image')) {
+    return dataUrl;
+  }
+  // If already under 120KB, no need to re-encode
+  if (dataUrl.length < 120000) {
+    return dataUrl;
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    } catch {
+      resolve(dataUrl);
+    }
+  });
+}
+
+/**
  * Removes `undefined` values and ensures the data can be safely stored in Cloud Firestore.
  * Cloud Firestore rejects documents containing undefined fields.
  */
@@ -66,13 +128,19 @@ export function syncFirestoreCollection<T extends { id?: string; studentId?: str
     const unsubscribe = onSnapshot(
       colRef,
       (snapshot) => {
+        const isLiveProduction = typeof window !== 'undefined' && 
+          localStorage.getItem('sma_live_production_active') === 'true';
+
         if (!snapshot.empty) {
           const items: T[] = [];
           snapshot.forEach((docSnap) => {
             const data = docSnap.data() as T;
-            // Ensure ID is populated
+            // Ensure ID and studentId are populated from the document ID
             if (!data.id && docSnap.id) {
               (data as any).id = docSnap.id;
+            }
+            if (!data.studentId && docSnap.id) {
+              (data as any).studentId = docSnap.id;
             }
             items.push(data);
           });
@@ -85,7 +153,16 @@ export function syncFirestoreCollection<T extends { id?: string; studentId?: str
             console.warn(`[FirestoreSync] Failed to update cache for ${collectionName}:`, e);
           }
         } else {
-          // Collection is currently empty in Firestore.
+          // Collection is empty in Firestore.
+          // If the system is in live clean slate mode, DO NOT re-inject fallback demo data!
+          if (isLiveProduction) {
+            onData([]);
+            try {
+              localStorage.setItem(localStorageKey, JSON.stringify([]));
+            } catch {}
+            return;
+          }
+
           // Check if local storage has valid items to migrate up to Firestore
           try {
             const cached = localStorage.getItem(localStorageKey);
@@ -102,7 +179,7 @@ export function syncFirestoreCollection<T extends { id?: string; studentId?: str
             console.warn(`[FirestoreSync] Error checking local cache for migration to ${collectionName}:`, e);
           }
 
-          // If both Firestore and local cache are empty, seed fallback if available
+          // If both Firestore and local cache are empty, seed fallback if available and not live mode
           if (fallbackInitialData.length > 0) {
             batchSaveToFirestore(collectionName, fallbackInitialData);
             onData(fallbackInitialData);
@@ -134,12 +211,30 @@ export async function saveToFirestore<T extends Record<string, any>>(
   docId: string,
   data: T
 ): Promise<boolean> {
+  const safeDocId = cleanDocId(docId);
   try {
-    const sanitized = sanitizeForFirestore(data);
-    await setDoc(doc(db, collectionName, docId), sanitized, { merge: true });
+    // If the object contains a profileImage, compress it if it's large
+    const payload: Record<string, any> = { ...data };
+    if (typeof payload.profileImage === 'string' && payload.profileImage.startsWith('data:image')) {
+      payload.profileImage = await compressImageBase64(payload.profileImage, 320, 0.75);
+    }
+
+    const sanitized = sanitizeForFirestore(payload);
+    await setDoc(doc(db, collectionName, safeDocId), sanitized, { merge: true });
+    
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sma_firestore_saved', { 
+        detail: { collection: collectionName, id: safeDocId } 
+      }));
+    }
     return true;
   } catch (error) {
-    console.warn(`[FirestoreSync] Failed saving document ${docId} to ${collectionName}:`, error);
+    console.error(`[FirestoreSync] Failed saving document ${safeDocId} to ${collectionName}:`, error);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sma_firestore_error', { 
+        detail: { collection: collectionName, id: safeDocId, error } 
+      }));
+    }
     return false;
   }
 }
@@ -151,11 +246,12 @@ export async function deleteFromFirestore(
   collectionName: string,
   docId: string
 ): Promise<boolean> {
+  const safeDocId = cleanDocId(docId);
   try {
-    await deleteDoc(doc(db, collectionName, docId));
+    await deleteDoc(doc(db, collectionName, safeDocId));
     return true;
   } catch (error) {
-    console.warn(`[FirestoreSync] Failed deleting document ${docId} from ${collectionName}:`, error);
+    console.warn(`[FirestoreSync] Failed deleting document ${safeDocId} from ${collectionName}:`, error);
     return false;
   }
 }
@@ -170,9 +266,16 @@ export async function batchSaveToFirestore<T extends Record<string, any>>(
 ): Promise<boolean> {
   try {
     for (const item of items) {
-      const docId = String(item[idField] || (item as any).studentId || `doc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`);
-      const sanitized = sanitizeForFirestore(item);
-      await setDoc(doc(db, collectionName, docId), sanitized, { merge: true });
+      const rawId = String(item[idField] || (item as any).studentId || `doc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
+      const safeDocId = cleanDocId(rawId);
+      
+      const payload: Record<string, any> = { ...item };
+      if (typeof payload.profileImage === 'string' && payload.profileImage.startsWith('data:image')) {
+        payload.profileImage = await compressImageBase64(payload.profileImage, 320, 0.75);
+      }
+      
+      const sanitized = sanitizeForFirestore(payload);
+      await setDoc(doc(db, collectionName, safeDocId), sanitized, { merge: true });
     }
     return true;
   } catch (error) {
@@ -182,7 +285,7 @@ export async function batchSaveToFirestore<T extends Record<string, any>>(
 }
 
 /**
- * Purges all documents in a Firestore collection (e.g. for complete database reset).
+ * Purges all documents in a Firestore collection.
  */
 export async function clearFirestoreCollection(collectionName: string): Promise<boolean> {
   try {
@@ -194,6 +297,34 @@ export async function clearFirestoreCollection(collectionName: string): Promise<
     console.warn(`[FirestoreSync] Clear collection failed for ${collectionName}:`, error);
     return false;
   }
+}
+
+/**
+ * Completely purges ALL school operational collections from Cloud Firestore.
+ * Used when switching to live production with a 100% clean slate.
+ */
+export async function clearAllFirestoreSchoolData(): Promise<void> {
+  const collectionsToClear = [
+    'students',
+    'academic_records',
+    'fee_ledgers',
+    'exam_preps',
+    'teachers',
+    'assignments',
+    'submissions',
+    'announcements',
+    'class_notices',
+    'buses',
+    'bus_assignments',
+    'daily_attendance',
+    'incidents',
+    'library_books',
+    'library_checkouts',
+  ];
+
+  await Promise.allSettled(
+    collectionsToClear.map(col => clearFirestoreCollection(col))
+  );
 }
 
 /**

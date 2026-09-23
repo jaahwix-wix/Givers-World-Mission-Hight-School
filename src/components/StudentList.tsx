@@ -48,6 +48,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import StudentIdCardModal from './StudentIdCardModal';
 import StudentAttendancePanel from './StudentAttendancePanel';
 import StudentDisciplinaryPanel from './StudentDisciplinaryPanel';
+import { compressImageBase64 } from '../services/firestoreSync';
 
 interface StudentListProps {
   students: Student[];
@@ -226,13 +227,19 @@ export default function StudentList({
     }
   };
 
-  // Upload File handler
+  // Upload File handler with automatic thumbnail compression for Firestore efficiency
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormProfileImage(reader.result as string);
+      reader.onloadend = async () => {
+        const raw = reader.result as string;
+        try {
+          const compressed = await compressImageBase64(raw, 300, 0.75);
+          setFormProfileImage(compressed);
+        } catch {
+          setFormProfileImage(raw);
+        }
       };
       reader.readAsDataURL(file);
     }

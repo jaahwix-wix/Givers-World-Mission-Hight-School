@@ -23,6 +23,11 @@ import {
   Award
 } from 'lucide-react';
 import { Student } from '../types';
+import { 
+  syncFirestoreCollection, 
+  saveToFirestore, 
+  deleteFromFirestore 
+} from '../services/firestoreSync';
 
 interface LibraryProps {
   students: Student[];
@@ -44,6 +49,7 @@ interface CheckOutRecord {
   bookTitle: string;
   studentId: string;
   studentName: string;
+  studentClass?: string;
   issueDate: string;
   dueDate: string;
   returnDate?: string;
@@ -84,31 +90,30 @@ export default function Library({ students }: LibraryProps) {
   const [checkoutDueDate, setCheckoutDueDate] = useState('');
 
   useEffect(() => {
-    const loadLibraryData = () => {
-      const cachedBooks = localStorage.getItem('sma_library_books');
-      const cachedCheckouts = localStorage.getItem('sma_library_checkouts');
+    const unsubBooks = syncFirestoreCollection<BookItem>(
+      'library_books',
+      'sma_library_books',
+      (items) => setBooks(items),
+      DEFAULT_BOOKS
+    );
 
-      if (cachedBooks) {
-        setBooks(JSON.parse(cachedBooks));
-      } else {
-        setBooks(DEFAULT_BOOKS);
-        localStorage.setItem('sma_library_books', JSON.stringify(DEFAULT_BOOKS));
-      }
+    const unsubCheckouts = syncFirestoreCollection<CheckOutRecord>(
+      'library_checkouts',
+      'sma_library_checkouts',
+      (items) => setCheckouts(items),
+      DEFAULT_CHECKOUTS
+    );
 
-      if (cachedCheckouts) {
-        setCheckouts(JSON.parse(cachedCheckouts));
-      } else {
-        setCheckouts(DEFAULT_CHECKOUTS);
-        localStorage.setItem('sma_library_checkouts', JSON.stringify(DEFAULT_CHECKOUTS));
-      }
+    const handleWiped = () => {
+      setBooks([]);
+      setCheckouts([]);
     };
 
-    loadLibraryData();
-    window.addEventListener('sma_database_wiped', loadLibraryData);
-    window.addEventListener('storage', loadLibraryData);
+    window.addEventListener('sma_database_wiped', handleWiped);
     return () => {
-      window.removeEventListener('sma_database_wiped', loadLibraryData);
-      window.removeEventListener('storage', loadLibraryData);
+      unsubBooks();
+      unsubCheckouts();
+      window.removeEventListener('sma_database_wiped', handleWiped);
     };
   }, []);
 
@@ -127,21 +132,25 @@ export default function Library({ students }: LibraryProps) {
         const fine = diffDays * 1000;
         
         changed = true;
-        return {
+        const modified = {
           ...co,
           status: 'Overdue' as const,
           fineAmount: fine
         };
+        saveToFirestore('library_checkouts', co.id, modified);
+        return modified;
       } else if (co.status === 'Overdue') {
         const diffTime = Math.abs(new Date(today).getTime() - new Date(co.dueDate).getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         const fine = diffDays * 1000;
         if (co.fineAmount !== fine) {
           changed = true;
-          return {
+          const modified = {
             ...co,
             fineAmount: fine
           };
+          saveToFirestore('library_checkouts', co.id, modified);
+          return modified;
         }
       }
       return co;
@@ -191,16 +200,18 @@ export default function Library({ students }: LibraryProps) {
     if (editingBook) {
       // Edit Book
       const diff = formTotalCopies - editingBook.totalCopies;
-      const updated = books.map(b => b.id === editingBook.id ? {
-        ...b,
+      const updatedBook: BookItem = {
+        ...editingBook,
         title: formTitle,
         author: formAuthor,
         isbn: formIsbn,
         category: formCategory,
         totalCopies: formTotalCopies,
-        availableCopies: Math.max(0, b.availableCopies + diff)
-      } : b);
+        availableCopies: Math.max(0, editingBook.availableCopies + diff)
+      };
+      const updated = books.map(b => b.id === editingBook.id ? updatedBook : b);
       saveBooks(updated);
+      saveToFirestore('library_books', updatedBook.id, updatedBook);
     } else {
       // Add Book
       const newBook: BookItem = {
@@ -213,6 +224,7 @@ export default function Library({ students }: LibraryProps) {
         availableCopies: formTotalCopies
       };
       saveBooks([...books, newBook]);
+      saveToFirestore('library_books', newBook.id, newBook);
     }
     setIsBookModalOpen(false);
   };
@@ -221,6 +233,7 @@ export default function Library({ students }: LibraryProps) {
     if (window.confirm('Are you sure you want to delete this book from the catalog?')) {
       const updated = books.filter(b => b.id !== id);
       saveBooks(updated);
+      deleteFromFirestore('library_books', id);
     }
   };
 
@@ -245,11 +258,13 @@ export default function Library({ students }: LibraryProps) {
     }
 
     // Deduct available copy
-    const updatedBooks = books.map(b => b.id === book.id ? {
-      ...b,
-      availableCopies: b.availableCopies - 1
-    } : b);
+    const updatedBook: BookItem = {
+      ...book,
+      availableCopies: book.availableCopies - 1
+    };
+    const updatedBooks = books.map(b => b.id === book.id ? updatedBook : b);
     saveBooks(updatedBooks);
+    saveToFirestore('library_books', updatedBook.id, updatedBook);
 
     // Create checkout record
     const newRecord: CheckOutRecord = {
@@ -258,43 +273,55 @@ export default function Library({ students }: LibraryProps) {
       bookTitle: book.title,
       studentId: student.id,
       studentName: student.name,
+      studentClass: student.currentClass,
       issueDate: new Date().toISOString().substring(0, 10),
-      dueDate: checkoutDueDate,
-      fineAmount: 0,
-      status: 'Checked Out'
+      dueDate: checkoutDueDate || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10),
+      status: 'Checked Out',
+      fineAmount: 0
     };
 
-    saveCheckouts([...checkouts, newRecord]);
+    const updatedCheckouts = [newRecord, ...checkouts];
+    saveCheckouts(updatedCheckouts);
+    saveToFirestore('library_checkouts', newRecord.id, newRecord);
     setIsCheckoutModalOpen(false);
   };
 
-  const handleReturnBook = (coId: string) => {
-    const record = checkouts.find(co => co.id === coId);
-    if (!record) return;
+  const handleReturnBook = (record: CheckOutRecord) => {
+    const today = new Date().toISOString().substring(0, 10);
+    const updatedRecord: CheckOutRecord = {
+      ...record,
+      status: 'Returned',
+      returnDate: today
+    };
 
-    // Return physical copy to catalog
-    const updatedBooks = books.map(b => b.id === record.bookId ? {
-      ...b,
-      availableCopies: Math.min(b.totalCopies, b.availableCopies + 1)
-    } : b);
-    saveBooks(updatedBooks);
-
-    // Mark as returned
-    const updatedCheckouts = checkouts.map(co => co.id === coId ? {
-      ...co,
-      status: 'Returned' as const,
-      returnDate: new Date().toISOString().substring(0, 10)
-    } : co);
+    const updatedCheckouts = checkouts.map(co => co.id === record.id ? updatedRecord : co);
     saveCheckouts(updatedCheckouts);
+    saveToFirestore('library_checkouts', updatedRecord.id, updatedRecord);
+
+    // Restock book available copies
+    const book = books.find(b => b.id === record.bookId);
+    if (book) {
+      const updatedBook: BookItem = {
+        ...book,
+        availableCopies: Math.min(book.totalCopies, book.availableCopies + 1)
+      };
+      const updatedBooks = books.map(b => b.id === book.id ? updatedBook : b);
+      saveBooks(updatedBooks);
+      saveToFirestore('library_books', updatedBook.id, updatedBook);
+    }
   };
 
   const handleWaiveFine = (coId: string) => {
     if (window.confirm('Are you sure you want to waive this overdue fine?')) {
+      const target = checkouts.find(co => co.id === coId);
       const updated = checkouts.map(co => co.id === coId ? {
         ...co,
         fineAmount: 0
       } : co);
       saveCheckouts(updated);
+      if (target) {
+        saveToFirestore('library_checkouts', target.id, { ...target, fineAmount: 0 });
+      }
     }
   };
 
