@@ -11,6 +11,10 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    define: {
+      'process.env.FIREBASE_API_KEY': JSON.stringify(process.env.FIREBASE_API_KEY || 'AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
+      'process.env.VITE_FIREBASE_API_KEY': JSON.stringify(process.env.VITE_FIREBASE_API_KEY || 'AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
+    },
     server: {
       host: '0.0.0.0',
       port: 3000,

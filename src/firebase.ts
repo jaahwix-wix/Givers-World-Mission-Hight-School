@@ -24,9 +24,15 @@ import firebaseConfig from '../firebase-applet-config.json';
 import { UserRole, RolePrivileges, AuthUser } from './types';
 
 // Initialize Firebase App with environment variable override if provided
+const resolvedApiKey = 
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) ||
+  (typeof process !== 'undefined' && (process.env?.VITE_FIREBASE_API_KEY || process.env?.FIREBASE_API_KEY)) ||
+  firebaseConfig.apiKey ||
+  'AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0';
+
 const activeFirebaseConfig = {
   ...firebaseConfig,
-  apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) || firebaseConfig.apiKey,
+  apiKey: resolvedApiKey,
 };
 
 const app = initializeApp(activeFirebaseConfig);
