@@ -23,8 +23,13 @@ import {
 import firebaseConfig from '../firebase-applet-config.json';
 import { UserRole, RolePrivileges, AuthUser } from './types';
 
-// Initialize Firebase App
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase App with environment variable override if provided
+const activeFirebaseConfig = {
+  ...firebaseConfig,
+  apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) || firebaseConfig.apiKey,
+};
+
+const app = initializeApp(activeFirebaseConfig);
 
 // CRITICAL: Firestore must be initialized with the database ID from config.
 // Using experimentalForceLongPolling eliminates WebChannel streaming timeout and proxy buffering drops
