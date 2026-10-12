@@ -64,6 +64,7 @@ import NoticeManagement from './components/NoticeManagement';
 import PublicWebsite from './components/PublicWebsite';
 import GlobalHeader from './components/GlobalHeader';
 import PrivilegesModal from './components/PrivilegesModal';
+import CloudReferenceModal from './components/CloudReferenceModal';
 import AccessRestricted from './components/AccessRestricted';
 import SessionLoginGate from './components/SessionLoginGate';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -78,6 +79,7 @@ export type { PendingFeeStudent };
 export default function App() {
   const { user, role, privileges, can, isFirebaseOnline, setPortalActive, unlockSession } = useAuth();
   const [isPrivilegesModalOpen, setIsPrivilegesModalOpen] = useState(false);
+  const [isCloudReferenceModalOpen, setIsCloudReferenceModalOpen] = useState(false);
 
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -721,6 +723,7 @@ export default function App() {
           onNavigate={handleNavigate}
           onOpenPrivileges={() => setIsPrivilegesModalOpen(true)}
           onNavigateToWebsite={() => setViewMode('website')}
+          onOpenCloudReferenceModal={() => setIsCloudReferenceModalOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8" id="workspace-viewport">
@@ -743,6 +746,7 @@ export default function App() {
                   fees={fees} 
                   onNavigate={handleNavigate}
                   onUpdateStudent={handleUpdateStudent}
+                  onOpenCloudReferenceModal={() => setIsCloudReferenceModalOpen(true)}
                 />
               )}
 
@@ -852,6 +856,17 @@ export default function App() {
       <PrivilegesModal 
         isOpen={isPrivilegesModalOpen}
         onClose={() => setIsPrivilegesModalOpen(false)}
+      />
+
+      {/* Cloud Firebase Database Reference Modal */}
+      <CloudReferenceModal 
+        isOpen={isCloudReferenceModalOpen}
+        onClose={() => setIsCloudReferenceModalOpen(false)}
+        students={students}
+        records={records}
+        examPreps={examPreps}
+        fees={fees}
+        onRestoreData={handleRestoreData}
       />
 
       {/* Inactivity Session Lock & Login Gate (Portal Only - user can always exit to public website) */}

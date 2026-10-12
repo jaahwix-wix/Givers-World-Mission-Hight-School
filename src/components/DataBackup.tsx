@@ -23,11 +23,28 @@ import {
   Building2,
   Trash2,
   Radio,
-  CheckCircle2
+  CheckCircle2,
+  Cloud,
+  CloudUpload,
+  CloudDownload,
+  FolderArchive,
+  History,
+  Clock,
+  Sparkles,
+  ExternalLink
 } from 'lucide-react';
 import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
 import { wipeAllSystemData, getDatabaseAuditCounts } from '../utils/dataStore';
+import { 
+  saveAllSchoolRecordsToFirestore,
+  createReferenceSnapshot,
+  fetchReferenceSnapshots,
+  deleteReferenceSnapshot,
+  ReferenceSnapshot
+} from '../services/firestoreSync';
+import { useAuth } from '../context/AuthContext';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 interface DataBackupProps {
   students: Student[];
@@ -49,6 +66,125 @@ export default function DataBackup({ students, records, examPreps, fees, onResto
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const { user } = useAuth();
+  const [isCloudSaving, setIsCloudSaving] = useState(false);
+  const [isCloudFetching, setIsCloudFetching] = useState(false);
+  const [referenceSnapshots, setReferenceSnapshots] = useState<ReferenceSnapshot[]>([]);
+  const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
+  const [snapshotTitle, setSnapshotTitle] = useState('');
+  const [snapshotNotes, setSnapshotNotes] = useState('');
+  const [showSnapshotModal, setShowSnapshotModal] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    loadCloudSnapshots();
+  }, []);
+
+  const loadCloudSnapshots = async () => {
+    setIsCloudFetching(true);
+    try {
+      const list = await fetchReferenceSnapshots();
+      setReferenceSnapshots(list);
+    } catch (err) {
+      console.warn('Error fetching reference snapshots:', err);
+    } finally {
+      setIsCloudFetching(false);
+    }
+  };
+
+  const handleSaveAllToFirestore = async () => {
+    setIsCloudSaving(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+    try {
+      const teachers = JSON.parse(localStorage.getItem('sma_teachers') || '[]');
+      const books = JSON.parse(localStorage.getItem('sma_library_books') || '[]');
+      const buses = JSON.parse(localStorage.getItem('sma_buses') || '[]');
+      const notices = JSON.parse(localStorage.getItem('sma_class_notices') || '[]');
+
+      const result = await saveAllSchoolRecordsToFirestore({
+        students,
+        records,
+        examPreps,
+        fees,
+        teachers,
+        books,
+        buses,
+        notices
+      });
+
+      if (result.success) {
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setLastSyncTime(timeStr);
+        setSuccessMessage(
+          `All school records successfully saved to Cloud Firestore for reference! Synced: ${result.counts.students} students, ${result.counts.records} academic files, ${result.counts.fees} fee ledgers, ${result.counts.teachers} faculty, ${result.counts.books} books, ${result.counts.buses} buses.`
+        );
+      } else {
+        setErrorMessage('Failed to save some collections to Cloud Firestore. Please check network connection.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Error executing Cloud Firestore sync.');
+    } finally {
+      setIsCloudSaving(false);
+      setTimeout(() => setSuccessMessage(''), 7000);
+    }
+  };
+
+  const handleCreateSnapshot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingSnapshot(true);
+    try {
+      const teachers = JSON.parse(localStorage.getItem('sma_teachers') || '[]');
+      const books = JSON.parse(localStorage.getItem('sma_library_books') || '[]');
+
+      const newSnap = await createReferenceSnapshot(
+        snapshotTitle || `Reference Archive (${new Date().toLocaleDateString('en-GB')})`,
+        snapshotNotes,
+        user?.displayName || `${SCHOOL_INFO.principalName} (Admin)`,
+        { students, records, examPreps, fees, teachers, books }
+      );
+
+      if (newSnap) {
+        setReferenceSnapshots(prev => [newSnap, ...prev]);
+        setSuccessMessage(`Reference archive snapshot "${newSnap.title}" permanently saved in Cloud Firestore!`);
+        setShowSnapshotModal(false);
+        setSnapshotTitle('');
+        setSnapshotNotes('');
+      } else {
+        setErrorMessage('Failed to archive snapshot to Cloud Firestore.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Error creating snapshot.');
+    } finally {
+      setIsCreatingSnapshot(false);
+      setTimeout(() => setSuccessMessage(''), 6000);
+    }
+  };
+
+  const handleRestoreSnapshot = (snap: ReferenceSnapshot) => {
+    if (!window.confirm(`Load reference records from archive snapshot "${snap.title}" (saved on ${new Date(snap.savedAt).toLocaleDateString('en-GB')})? This will load the archived students, grades, and fee records.`)) {
+      return;
+    }
+    onRestoreData({
+      students: snap.payload.students,
+      records: snap.payload.records,
+      examPreps: snap.payload.examPreps,
+      fees: snap.payload.fees
+    });
+    setSuccessMessage(`Active database loaded from reference snapshot "${snap.title}".`);
+    setTimeout(() => setSuccessMessage(''), 5000);
+  };
+
+  const handleDeleteSnapshot = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this reference snapshot from Cloud Firestore?')) return;
+    const ok = await deleteReferenceSnapshot(id);
+    if (ok) {
+      setReferenceSnapshots(prev => prev.filter(s => s.id !== id));
+      setSuccessMessage('Reference archive removed from Cloud Firestore.');
+      setTimeout(() => setSuccessMessage(''), 4000);
+    }
+  };
 
   // 1. Export Data to JSON
   const handleExport = () => {
@@ -638,8 +774,246 @@ export default function DataBackup({ students, records, examPreps, fees, onResto
       {/* Informative Header */}
       <div>
         <h2 className="text-xl font-bold text-slate-800">Backup & Administration Center</h2>
-        <p className="text-xs text-slate-400">Export database backups, generate official audit reports, or restore registry data</p>
+        <p className="text-xs text-slate-400">Save records to Cloud Firestore for reference, export database backups, or generate official audit reports</p>
       </div>
+
+      {/* CLOUD FIRESTORE REFERENCE STORAGE & DATABASE SYNC */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 rounded-3xl border border-indigo-500/30 shadow-xl space-y-5" id="cloud-firestore-reference-center">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-indigo-900/60 pb-5">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="p-3 bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 rounded-2xl shadow-inner">
+              <Cloud className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-white text-base sm:text-lg">
+                  Cloud Firestore Reference Database
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Active Reference Cloud
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                Persistent cloud storage for Givers World Mission Diplomats Academy. Save all active records into your provisioned database ({firebaseConfig.firestoreDatabaseId}) for permanent reference and historical audit.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 font-mono text-[11px] text-slate-300">
+              <span className="text-slate-400">DB:</span> {firebaseConfig.firestoreDatabaseId.substring(0, 18)}...
+            </div>
+            {lastSyncTime && (
+              <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" /> Synced at {lastSyncTime}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Database Metric Badges */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Student Registry</span>
+            <span className="text-lg font-black text-white mt-0.5 block">{students.length} Records</span>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Academic Terms</span>
+            <span className="text-lg font-black text-indigo-300 mt-0.5 block">{records.length} Student Files</span>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tuition Ledgers</span>
+            <span className="text-lg font-black text-emerald-400 mt-0.5 block">{fees.length} Accounts</span>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Saved Archives</span>
+            <span className="text-lg font-black text-amber-300 mt-0.5 block">{referenceSnapshots.length} Snapshots</span>
+          </div>
+        </div>
+
+        {/* Action Controls Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              disabled={isCloudSaving}
+              onClick={handleSaveAllToFirestore}
+              className="py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-black text-xs transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 cursor-pointer disabled:opacity-50"
+              title="Save all currently staged records to Cloud Firestore for permanent reference"
+            >
+              <CloudUpload className={`w-4 h-4 ${isCloudSaving ? 'animate-bounce' : ''}`} />
+              <span>{isCloudSaving ? 'Saving to Cloud Firestore...' : 'Save All Records to Cloud Firestore'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowSnapshotModal(true)}
+              className="py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-black text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer border border-indigo-400/40"
+              title="Archive a labeled historical snapshot of current records in Cloud Firestore"
+            >
+              <FolderArchive className="w-4 h-4" />
+              <span>Save Reference Snapshot Archive</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            disabled={isCloudFetching}
+            onClick={loadCloudSnapshots}
+            className="py-2.5 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 border border-slate-700 cursor-pointer disabled:opacity-50"
+            title="Refresh saved snapshots from Cloud Firestore"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isCloudFetching ? 'animate-spin' : ''}`} />
+            <span>Refresh Cloud</span>
+          </button>
+        </div>
+
+        {/* Saved Reference Snapshots Table */}
+        <div className="pt-3 border-t border-indigo-900/60 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-black text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+              <History className="w-3.5 h-3.5 text-indigo-400" />
+              Saved Reference Snapshot Archives in Firestore ({referenceSnapshots.length})
+            </h4>
+            <span className="text-[11px] text-slate-400">Immutable cloud audit checkpoints</span>
+          </div>
+
+          {referenceSnapshots.length === 0 ? (
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-center py-6 space-y-2">
+              <FolderArchive className="w-8 h-8 text-slate-500 mx-auto" />
+              <p className="text-xs font-bold text-slate-300">No reference snapshots created yet.</p>
+              <p className="text-[11px] text-slate-400 max-w-md mx-auto">
+                Click <span className="text-emerald-400 font-bold">"Save All Records to Cloud Firestore"</span> to sync current data, or click <span className="text-indigo-300 font-bold">"Save Reference Snapshot Archive"</span> to create an audit reference point.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {referenceSnapshots.map(snap => (
+                <div 
+                  key={snap.id} 
+                  className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 hover:border-indigo-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-black text-white text-sm">{snap.title}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 font-mono">
+                        {new Date(snap.savedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} {new Date(snap.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {snap.notes && (
+                      <p className="text-[11px] text-slate-300 line-clamp-1">{snap.notes}</p>
+                    )}
+                    <div className="flex items-center gap-3 text-[10px] text-slate-400 pt-0.5 flex-wrap">
+                      <span>👤 Saved by: <strong className="text-slate-300">{snap.savedBy}</strong></span>
+                      <span>👥 {snap.metrics.studentsCount} Students</span>
+                      <span>📚 {snap.metrics.recordsCount} Academic Files</span>
+                      <span>💳 {snap.metrics.feesCount} Fee Ledgers</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleRestoreSnapshot(snap)}
+                      className="py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                      title="Load this reference snapshot into active database"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Load Snapshot</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSnapshot(snap.id)}
+                      className="p-1.5 rounded-lg bg-slate-700/80 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
+                      title="Delete snapshot from Firestore"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL: CREATE REFERENCE SNAPSHOT ARCHIVE */}
+      {showSnapshotModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-indigo-500/40 rounded-3xl max-w-md w-full p-6 text-white shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-xl">
+                  <FolderArchive className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-white">Save Reference Archive Snapshot</h3>
+                  <p className="text-[11px] text-slate-400">Save complete checkpoint to Cloud Firestore</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSnapshotModal(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSnapshot} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Archive Title / Reference Label</label>
+                <input
+                  type="text"
+                  required
+                  value={snapshotTitle}
+                  onChange={(e) => setSnapshotTitle(e.target.value)}
+                  placeholder={`e.g. 2025/2026 Term 3 Final Audit (${new Date().toLocaleDateString('en-GB')})`}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white font-medium focus:ring-2 focus:ring-indigo-500 outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Administrative Notes (Optional)</label>
+                <textarea
+                  rows={3}
+                  value={snapshotNotes}
+                  onChange={(e) => setSnapshotNotes(e.target.value)}
+                  placeholder="Notes for ministerial audit, end-of-term reference, or enrollment milestone..."
+                  className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-medium focus:ring-2 focus:ring-indigo-500 outline-hidden resize-none"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-1 text-[11px] text-slate-300">
+                <span className="font-bold text-indigo-300 block">Snapshot Contents:</span>
+                <p>• {students.length} Student Files & Identifiers</p>
+                <p>• {records.length} Terminal Continuous Assessments</p>
+                <p>• {fees.length} Tuition Fee Accounts & Transaction Receipts</p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSnapshotModal(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingSnapshot}
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  <CloudUpload className="w-4 h-4" />
+                  <span>{isCreatingSnapshot ? 'Saving Snapshot...' : 'Save to Firestore'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* BULK EXPORT FEATURE: External Reporting & Audit Center */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5" id="bulk-export-center">

@@ -22,7 +22,9 @@ import {
   LineChart as LineChartIcon,
   CheckCircle2,
   Target,
-  Sparkles
+  Sparkles,
+  CloudUpload,
+  CheckCircle
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -37,6 +39,7 @@ import {
 } from 'recharts';
 import { Student, StudentAcademicRecord, NationalExamPrep, SubjectGrade, StudentClass } from '../types';
 import { CLASSES_LIST, getSubjectsForClass, calculateGrade } from '../constants';
+import { batchSaveToFirestore } from '../services/firestoreSync';
 
 interface AcademicPortalProps {
   students: Student[];
@@ -88,6 +91,28 @@ export default function AcademicPortal({
   const [editPrincipalRemarks, setEditPrincipalRemarks] = useState('');
   const [editConduct, setEditConduct] = useState('');
   const [editAttendance, setEditAttendance] = useState({ totalDays: 70, presentDays: 65 });
+
+  // Sync all academic records directly to Firebase for reference
+  const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const handleSyncGradesToFirebase = async () => {
+    setIsSyncingFirebase(true);
+    setSyncFeedback(null);
+    try {
+      const ok = await batchSaveToFirestore('academic_records', records, 'studentId');
+      if (ok) {
+        setSyncFeedback(`Successfully saved all ${records.length} academic files to Firebase database for reference!`);
+      } else {
+        setSyncFeedback('Failed saving academic records to Firebase.');
+      }
+    } catch (e: any) {
+      setSyncFeedback(e?.message || 'Error saving to Firebase.');
+    } finally {
+      setIsSyncingFirebase(false);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    }
+  };
 
   // Terminal Performance Trend Data (Term 1, Term 2, Term 3) for the Recharts Line Graph
   const terminalTrendData = useMemo(() => {
@@ -393,29 +418,50 @@ export default function AcademicPortal({
 
   return (
     <div className="space-y-6" id="academic-portal-panel">
-      {/* Tab Selectors */}
-      <div className="flex border-b border-slate-100 bg-white p-1.5 rounded-2xl shadow-xs" id="academic-tab-headers">
+      {/* Tab Selectors & Firebase Action */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-1.5 rounded-2xl shadow-xs border border-slate-100" id="academic-tab-headers">
+        <div className="flex flex-1 gap-1">
+          <button
+            onClick={() => setActiveTab('marks')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === 'marks' 
+                ? 'bg-indigo-600 text-white shadow-sm' 
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Award className="w-4 h-4" /> Continuous Assessment & Marks
+          </button>
+          <button
+            onClick={() => setActiveTab('exams')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+              activeTab === 'exams' 
+                ? 'bg-indigo-600 text-white shadow-sm' 
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" /> National Examinations Prep (WAEC)
+          </button>
+        </div>
+
         <button
-          onClick={() => setActiveTab('marks')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-            activeTab === 'marks' 
-              ? 'bg-indigo-600 text-white shadow-sm' 
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
+          type="button"
+          disabled={isSyncingFirebase}
+          onClick={handleSyncGradesToFirebase}
+          className="flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs transition-colors shadow-2xs cursor-pointer disabled:opacity-50 shrink-0 self-end sm:self-auto"
+          title="Save all continuous assessment marks into Firebase database for reference uses"
+          id="academic-save-firebase-btn"
         >
-          <Award className="w-4 h-4" /> Continuous Assessment & Marks
-        </button>
-        <button
-          onClick={() => setActiveTab('exams')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-            activeTab === 'exams' 
-              ? 'bg-indigo-600 text-white shadow-sm' 
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <GraduationCap className="w-4 h-4" /> National Examinations Prep (WAEC)
+          <CloudUpload className={`w-3.5 h-3.5 ${isSyncingFirebase ? 'animate-bounce' : ''}`} />
+          <span>{isSyncingFirebase ? 'Saving...' : 'Save Grades to Firebase (Reference)'}</span>
         </button>
       </div>
+
+      {syncFeedback && (
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{syncFeedback}</span>
+        </div>
+      )}
 
       {/* VIEW 1: MARKS & GRADE ENTRY */}
       {activeTab === 'marks' && (

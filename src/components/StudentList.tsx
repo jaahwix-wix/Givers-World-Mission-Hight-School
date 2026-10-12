@@ -38,11 +38,13 @@ import {
   GraduationCap,
   Award,
   KeyRound,
-  Copy
+  Copy,
+  CloudUpload
 } from 'lucide-react';
 import { Student, StudentClass, SSSStream, UniversityProgram } from '../types';
 import { CLASSES_LIST, SSS_STREAMS, UNIVERSITY_PROGRAMS } from '../constants';
 import { SCHOOL_INFO } from '../initialData';
+import { batchSaveToFirestore } from '../services/firestoreSync';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import StudentIdCardModal from './StudentIdCardModal';
@@ -155,6 +157,28 @@ export default function StudentList({
       verifiedAt: newStatus ? new Date().toISOString().split('T')[0] : undefined,
     };
     onUpdateStudent(updated);
+  };
+
+  // Sync all students directly to Firebase for reference
+  const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const handleSyncStudentsToFirebase = async () => {
+    setIsSyncingFirebase(true);
+    setSyncFeedback(null);
+    try {
+      const ok = await batchSaveToFirestore('students', students, 'id');
+      if (ok) {
+        setSyncFeedback(`Successfully saved all ${students.length} students to Firebase database for reference!`);
+      } else {
+        setSyncFeedback('Failed saving students to Firebase.');
+      }
+    } catch (e: any) {
+      setSyncFeedback(e?.message || 'Error saving to Firebase.');
+    } finally {
+      setIsSyncingFirebase(false);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    }
   };
 
   // Camera Management States & Refs
@@ -447,6 +471,17 @@ export default function StudentList({
           >
             <CreditCard className="w-4.5 h-4.5" /> ID Cards & Badges
           </button>
+          <button
+            type="button"
+            disabled={isSyncingFirebase}
+            onClick={handleSyncStudentsToFirebase}
+            className="flex items-center justify-center gap-1.5 py-2 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+            title="Save all student records into Firebase database for reference uses"
+            id="students-save-firebase-btn"
+          >
+            <CloudUpload className={`w-4 h-4 ${isSyncingFirebase ? 'animate-bounce' : ''}`} />
+            <span>{isSyncingFirebase ? 'Saving to Firebase...' : 'Save to Firebase (Reference)'}</span>
+          </button>
           <button 
             onClick={handleAddClick}
             className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-colors shadow-sm cursor-pointer"
@@ -455,6 +490,13 @@ export default function StudentList({
           </button>
         </div>
       </div>
+
+      {syncFeedback && (
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{syncFeedback}</span>
+        </div>
+      )}
 
       {/* Sub tabs: Directory vs Medical Records */}
       <div className="flex border-b border-slate-200/80 mt-2" id="directory-subtabs">

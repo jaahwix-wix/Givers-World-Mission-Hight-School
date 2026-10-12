@@ -37,9 +37,18 @@ interface GlobalHeaderProps {
   onNavigate: (tab: string, arg?: any) => void;
   onOpenPrivileges: () => void;
   onNavigateToWebsite?: () => void;
+  onOpenCloudReferenceModal?: () => void;
 }
 
-export default function GlobalHeader({ students, fees, activeTab, onNavigate, onOpenPrivileges, onNavigateToWebsite }: GlobalHeaderProps) {
+export default function GlobalHeader({ 
+  students, 
+  fees, 
+  activeTab, 
+  onNavigate, 
+  onOpenPrivileges, 
+  onNavigateToWebsite,
+  onOpenCloudReferenceModal
+}: GlobalHeaderProps) {
   const { user, role, privileges, isFirebaseOnline, lockSession, secondsRemaining } = useAuth();
   const { alerts, unreadCount, markAsRead, markAllAsRead, addAnnouncement } = useNotifications({ students, fees });
   const [searchQuery, setSearchQuery] = useState('');
@@ -307,11 +316,18 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate, on
 
       {/* Header Right Status Bar */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold" title="Data is synchronized continuously to Cloud Firestore across all devices">
-          <Cloud className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Cloud Synced</span>
-        </div>
+        {/* Save to Firebase Reference Database Button */}
+        <button
+          type="button"
+          onClick={onOpenCloudReferenceModal}
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-all cursor-pointer group"
+          title="Save school records to Firebase database for reference uses or browse archives"
+          id="global-header-save-firebase-btn"
+        >
+          <Cloud className="w-3.5 h-3.5 group-hover:scale-110 transition-transform text-white" />
+          <span className="hidden sm:inline">Save to Firebase</span>
+          <span className="hidden xl:inline text-[10px] text-emerald-100 font-semibold">• Reference DB</span>
+        </button>
 
         <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

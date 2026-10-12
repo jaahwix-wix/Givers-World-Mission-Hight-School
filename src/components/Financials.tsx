@@ -23,11 +23,14 @@ import {
   ShieldCheck,
   MessageSquare,
   Send,
-  Smartphone
+  Smartphone,
+  CloudUpload,
+  CheckCircle
 } from 'lucide-react';
 import { Student, StudentFeeLedger, FeeTransaction } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import FeeAlertSMSCenter from './FeeAlertSMSCenter';
+import { batchSaveToFirestore } from '../services/firestoreSync';
 
 interface FinancialsProps {
   students: Student[];
@@ -254,6 +257,28 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
     }, 500);
   };
 
+  // Sync fee accounts to Firebase for reference
+  const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const handleSyncFeesToFirebase = async () => {
+    setIsSyncingFirebase(true);
+    setSyncFeedback(null);
+    try {
+      const ok = await batchSaveToFirestore('fee_ledgers', fees, 'studentId');
+      if (ok) {
+        setSyncFeedback(`Successfully saved ${fees.length} tuition fee accounts to Firebase database for reference!`);
+      } else {
+        setSyncFeedback('Failed saving fee ledgers to Firebase.');
+      }
+    } catch (e: any) {
+      setSyncFeedback(e?.message || 'Error saving to Firebase.');
+    } finally {
+      setIsSyncingFirebase(false);
+      setTimeout(() => setSyncFeedback(null), 5000);
+    }
+  };
+
   // Filter students ledger
   const filteredLedgers = fees.filter(ledger => {
     const student = students.find(s => s.id === ledger.studentId);
@@ -315,6 +340,18 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
             </span>
           </button>
 
+          <button
+            type="button"
+            disabled={isSyncingFirebase}
+            onClick={handleSyncFeesToFirebase}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+            title="Save all tuition fee accounts into Firebase database for reference uses"
+            id="financials-save-firebase-btn"
+          >
+            <CloudUpload className={`w-3.5 h-3.5 ${isSyncingFirebase ? 'animate-bounce' : ''}`} />
+            <span>{isSyncingFirebase ? 'Saving...' : 'Save to Firebase (Reference)'}</span>
+          </button>
+
           <span className="text-[11px] text-slate-400 hidden md:inline">Term {selectedTermFilter} Active • Updated: {lastSyncTime}</span>
           <button
             type="button"
@@ -328,6 +365,13 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
           </button>
         </div>
       </div>
+
+      {syncFeedback && (
+        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{syncFeedback}</span>
+        </div>
+      )}
 
       {/* Metrics Ribbon with Animated Progress Bars */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" id="fees-metrics-grid">

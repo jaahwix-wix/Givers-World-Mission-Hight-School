@@ -34,7 +34,11 @@ import {
   Building2,
   ShieldCheck,
   PhoneCall,
-  RefreshCw
+  RefreshCw,
+  Cloud,
+  CloudUpload,
+  FolderArchive,
+  Database
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { 
@@ -45,12 +49,14 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer,
-  Cell
+  ResponsiveContainer, 
+  Cell 
 } from 'recharts';
 import { Student, StudentAcademicRecord, NationalExamPrep, StudentFeeLedger } from '../types';
 import { SCHOOL_INFO } from '../initialData';
 import { useAuth } from '../context/AuthContext';
+import { saveAllSchoolRecordsToFirestore } from '../services/firestoreSync';
+import firebaseConfig from '../../firebase-applet-config.json';
 import PrincipalsNoticeBanner from './PrincipalsNoticeBanner';
 import VerificationQueue from './VerificationQueue';
 import FinancialHealthCard from './FinancialHealthCard';
@@ -66,9 +72,18 @@ interface DashboardProps {
   fees: StudentFeeLedger[];
   onNavigate: (tab: string, arg?: any) => void;
   onUpdateStudent?: (student: Student) => void;
+  onOpenCloudReferenceModal?: () => void;
 }
 
-export default function Dashboard({ students, records, examPreps, fees, onNavigate, onUpdateStudent }: DashboardProps) {
+export default function Dashboard({ 
+  students, 
+  records, 
+  examPreps, 
+  fees, 
+  onNavigate, 
+  onUpdateStudent,
+  onOpenCloudReferenceModal
+}: DashboardProps) {
   const { role, can } = useAuth();
   const isAdmin = role === 'admin' || can('canVerifyStaffAndStudents');
 
@@ -91,6 +106,45 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
       setIsSyncing(false);
       setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }, 650);
+  };
+
+  // Firebase Quick Reference Save State
+  const [isSavingToFirebase, setIsSavingToFirebase] = useState(false);
+  const [firebaseSaveFeedback, setFirebaseSaveFeedback] = useState<string | null>(null);
+
+  const handleQuickSaveToFirebase = async () => {
+    setIsSavingToFirebase(true);
+    setFirebaseSaveFeedback(null);
+    try {
+      const teachers = JSON.parse(localStorage.getItem('sma_teachers') || '[]');
+      const books = JSON.parse(localStorage.getItem('sma_library_books') || '[]');
+      const buses = JSON.parse(localStorage.getItem('sma_buses') || '[]');
+      const notices = JSON.parse(localStorage.getItem('sma_class_notices') || '[]');
+
+      const result = await saveAllSchoolRecordsToFirestore({
+        students,
+        records,
+        examPreps,
+        fees,
+        teachers,
+        books,
+        buses,
+        notices
+      });
+
+      if (result.success) {
+        setFirebaseSaveFeedback(
+          `Successfully saved ${result.counts.students} students, ${result.counts.records} academic records, and ${result.counts.fees} fee ledgers to Firebase database for reference uses!`
+        );
+      } else {
+        setFirebaseSaveFeedback('Failed to save some collections to Firebase database. Check network.');
+      }
+    } catch (e: any) {
+      setFirebaseSaveFeedback(e?.message || 'Error saving to Firebase database.');
+    } finally {
+      setIsSavingToFirebase(false);
+      setTimeout(() => setFirebaseSaveFeedback(null), 6000);
+    }
   };
 
   // 1. Calculations
@@ -711,6 +765,87 @@ CEO/Principal, Givers World Mission`;
           onNavigate={onNavigate} 
         />
       )}
+
+      {/* Cloud Firebase Database & Reference Center Card */}
+      <div 
+        className="rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-5 sm:p-6 border border-indigo-500/30 shadow-lg space-y-4"
+        id="dashboard-firebase-reference-card"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-900/60 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 shadow-inner">
+              <Cloud className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-white text-base">Firebase Database & Reference Archives</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Cloud Connected
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Save active school records directly into your Firebase database ({firebaseConfig.firestoreDatabaseId}) for reference uses and historical audit.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+            <button
+              type="button"
+              disabled={isSavingToFirebase}
+              onClick={handleQuickSaveToFirebase}
+              className="py-2 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-slate-950 font-black text-xs transition-all flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
+              title="Save all active student records, academic marks, and fee ledgers into Firebase database"
+              id="dashboard-save-firebase-records-btn"
+            >
+              <CloudUpload className={`w-3.5 h-3.5 ${isSavingToFirebase ? 'animate-bounce' : ''}`} />
+              <span>{isSavingToFirebase ? 'Saving to Firebase...' : 'Save Records to Firebase'}</span>
+            </button>
+
+            {onOpenCloudReferenceModal && (
+              <button
+                type="button"
+                onClick={onOpenCloudReferenceModal}
+                className="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs cursor-pointer border border-indigo-400/40"
+                title="Create labeled reference snapshots or manage archives"
+                id="dashboard-open-reference-archives-btn"
+              >
+                <FolderArchive className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">Reference Archives</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Live Feedback Toast Banner */}
+        {firebaseSaveFeedback && (
+          <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-200 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{firebaseSaveFeedback}</span>
+          </div>
+        )}
+
+        {/* Staged Counters */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+            <span className="text-slate-400 font-medium">Students</span>
+            <span className="font-black text-white font-mono">{students.length} Records</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+            <span className="text-slate-400 font-medium">Academic Files</span>
+            <span className="font-black text-indigo-300 font-mono">{records.length} Files</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+            <span className="text-slate-400 font-medium">Tuition Ledgers</span>
+            <span className="font-black text-emerald-300 font-mono">{fees.length} Accounts</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+            <span className="text-slate-400 font-medium">Exam Candidates</span>
+            <span className="font-black text-amber-300 font-mono">{examCandidateCount} Registered</span>
+          </div>
+        </div>
+      </div>
 
       {/* Section Header: KPI Metrics Toolbar with Live Sync Indicator */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">

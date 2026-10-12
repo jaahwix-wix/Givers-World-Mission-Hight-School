@@ -329,3 +329,217 @@ export async function checkFirestoreSyncStatus(): Promise<boolean> {
     return false;
   }
 }
+
+export interface ReferenceSnapshot {
+  id: string;
+  title: string;
+  notes?: string;
+  savedAt: string;
+  savedBy: string;
+  metrics: {
+    studentsCount: number;
+    recordsCount: number;
+    feesCount: number;
+    examPrepsCount: number;
+    teachersCount: number;
+    libraryCount: number;
+    totalDue?: number;
+    totalCollected?: number;
+    totalOutstanding?: number;
+  };
+  payload: {
+    students: any[];
+    records: any[];
+    examPreps: any[];
+    fees: any[];
+    teachers?: any[];
+    books?: any[];
+    buses?: any[];
+    notices?: any[];
+  };
+}
+
+/**
+ * Saves all current school records to Cloud Firestore across all core collections.
+ */
+export async function saveAllSchoolRecordsToFirestore(data: {
+  students: any[];
+  records: any[];
+  examPreps: any[];
+  fees: any[];
+  teachers?: any[];
+  books?: any[];
+  buses?: any[];
+  notices?: any[];
+}): Promise<{
+  success: boolean;
+  counts: {
+    students: number;
+    records: number;
+    fees: number;
+    examPreps: number;
+    teachers: number;
+    books: number;
+    buses: number;
+    notices: number;
+  };
+}> {
+  const counts = {
+    students: 0,
+    records: 0,
+    fees: 0,
+    examPreps: 0,
+    teachers: 0,
+    books: 0,
+    buses: 0,
+    notices: 0,
+  };
+
+  try {
+    if (data.students && data.students.length > 0) {
+      await batchSaveToFirestore('students', data.students, 'id');
+      counts.students = data.students.length;
+    }
+
+    if (data.records && data.records.length > 0) {
+      await batchSaveToFirestore('academic_records', data.records, 'studentId');
+      counts.records = data.records.length;
+    }
+
+    if (data.fees && data.fees.length > 0) {
+      await batchSaveToFirestore('fee_ledgers', data.fees, 'studentId');
+      counts.fees = data.fees.length;
+    }
+
+    if (data.examPreps && data.examPreps.length > 0) {
+      await batchSaveToFirestore('exam_preps', data.examPreps, 'id');
+      counts.examPreps = data.examPreps.length;
+    }
+
+    if (data.teachers && data.teachers.length > 0) {
+      await batchSaveToFirestore('teachers', data.teachers, 'id');
+      counts.teachers = data.teachers.length;
+    }
+
+    if (data.books && data.books.length > 0) {
+      await batchSaveToFirestore('library_books', data.books, 'id');
+      counts.books = data.books.length;
+    }
+
+    if (data.buses && data.buses.length > 0) {
+      await batchSaveToFirestore('buses', data.buses, 'id');
+      counts.buses = data.buses.length;
+    }
+
+    if (data.notices && data.notices.length > 0) {
+      await batchSaveToFirestore('class_notices', data.notices, 'id');
+      counts.notices = data.notices.length;
+    }
+
+    return { success: true, counts };
+  } catch (err) {
+    console.error('[FirestoreSync] Failed saving all records to Firestore:', err);
+    return { success: false, counts };
+  }
+}
+
+/**
+ * Creates and archives an immutable reference snapshot in Cloud Firestore for institutional records & historical audit.
+ */
+export async function createReferenceSnapshot(
+  title: string,
+  notes: string,
+  savedBy: string,
+  data: {
+    students: any[];
+    records: any[];
+    examPreps: any[];
+    fees: any[];
+    teachers?: any[];
+    books?: any[];
+  }
+): Promise<ReferenceSnapshot | null> {
+  try {
+    const snapshotId = `ref_${Date.now()}`;
+    
+    let totalDue = 0;
+    let totalCollected = 0;
+    let totalOutstanding = 0;
+    (data.fees || []).forEach(f => {
+      [1, 2, 3].forEach(termNum => {
+        const t = f?.terms?.[termNum];
+        if (t) {
+          totalDue += Number(t.totalDue) || 0;
+          totalCollected += Number(t.paidAmount) || 0;
+          totalOutstanding += Number(t.balance) || 0;
+        }
+      });
+    });
+
+    const snapshotDoc: ReferenceSnapshot = {
+      id: snapshotId,
+      title: title.trim() || `Reference Archive ${new Date().toLocaleDateString('en-GB')}`,
+      notes: notes.trim() || 'Institutional database backup archived for historical reference uses.',
+      savedAt: new Date().toISOString(),
+      savedBy: savedBy || 'Administrator (Evangelist Saint Turay)',
+      metrics: {
+        studentsCount: data.students?.length || 0,
+        recordsCount: data.records?.length || 0,
+        feesCount: data.fees?.length || 0,
+        examPrepsCount: data.examPreps?.length || 0,
+        teachersCount: data.teachers?.length || 0,
+        libraryCount: data.books?.length || 0,
+        totalDue,
+        totalCollected,
+        totalOutstanding,
+      },
+      payload: {
+        students: data.students || [],
+        records: data.records || [],
+        examPreps: data.examPreps || [],
+        fees: data.fees || [],
+        teachers: data.teachers || [],
+        books: data.books || []
+      }
+    };
+
+    const sanitized = sanitizeForFirestore(snapshotDoc);
+    await setDoc(doc(db, 'reference_snapshots', snapshotId), sanitized);
+    return snapshotDoc;
+  } catch (err) {
+    console.error('[FirestoreSync] Error creating reference snapshot:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetches all saved reference snapshots from Cloud Firestore.
+ */
+export async function fetchReferenceSnapshots(): Promise<ReferenceSnapshot[]> {
+  try {
+    const snap = await getDocs(collection(db, 'reference_snapshots'));
+    const list: ReferenceSnapshot[] = [];
+    snap.forEach(d => {
+      list.push(d.data() as ReferenceSnapshot);
+    });
+    // Sort latest first
+    return list.sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime());
+  } catch (err) {
+    console.warn('[FirestoreSync] Failed fetching reference snapshots:', err);
+    return [];
+  }
+}
+
+/**
+ * Deletes a reference snapshot document from Cloud Firestore.
+ */
+export async function deleteReferenceSnapshot(snapshotId: string): Promise<boolean> {
+  try {
+    await deleteDoc(doc(db, 'reference_snapshots', snapshotId));
+    return true;
+  } catch (err) {
+    console.warn('[FirestoreSync] Failed deleting reference snapshot:', err);
+    return false;
+  }
+}
+

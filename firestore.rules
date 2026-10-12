@@ -150,5 +150,9 @@ service cloud.firestore {
     match /system_settings/{settingId} {
       allow read, write: if true;
     }
+
+    match /reference_snapshots/{snapshotId} {
+      allow read, write: if true;
+    }
   }
 }
