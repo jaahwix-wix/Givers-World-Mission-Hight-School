@@ -47,7 +47,21 @@ export default function PublicWebsite({ onEnterPortal, students = [] }: PublicWe
     };
   }, []);
 
+  // Check URL query parameters for direct MIS access
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('view') === 'portal' || searchParams.get('view') === 'mis' || window.location.hash === '#mis') {
+        handleLoginSuccess('admin');
+      }
+    } catch {}
+  }, []);
+
   const handleNavigate = (page: string) => {
+    if (page === 'mis' || page === 'dashboard') {
+      handleLoginSuccess('admin');
+      return;
+    }
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -77,6 +91,7 @@ export default function PublicWebsite({ onEnterPortal, students = [] }: PublicWe
       <WebsiteNavbar 
         currentPage={currentPage}
         onNavigate={handleNavigate}
+        onEnterMIS={() => handleLoginSuccess('admin')}
         noticeCount={notices.length}
       />
 

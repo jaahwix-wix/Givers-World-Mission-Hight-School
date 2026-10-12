@@ -154,15 +154,6 @@ export function syncFirestoreCollection<T extends { id?: string; studentId?: str
           }
         } else {
           // Collection is empty in Firestore.
-          // If the system is in live clean slate mode, DO NOT re-inject fallback demo data!
-          if (isLiveProduction) {
-            onData([]);
-            try {
-              localStorage.setItem(localStorageKey, JSON.stringify([]));
-            } catch {}
-            return;
-          }
-
           // Check if local storage has valid items to migrate up to Firestore
           try {
             const cached = localStorage.getItem(localStorageKey);
@@ -179,7 +170,7 @@ export function syncFirestoreCollection<T extends { id?: string; studentId?: str
             console.warn(`[FirestoreSync] Error checking local cache for migration to ${collectionName}:`, e);
           }
 
-          // If both Firestore and local cache are empty, seed fallback if available and not live mode
+          // If both Firestore and local cache are empty, automatically seed foundational reference records
           if (fallbackInitialData.length > 0) {
             batchSaveToFirestore(collectionName, fallbackInitialData);
             onData(fallbackInitialData);

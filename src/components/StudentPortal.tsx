@@ -360,7 +360,7 @@ Submit your solutions via the Givers World Mission High School Student Portal.
   const feeLedger = fees.find(f => f.studentId === student.id);
 
   // Term Calculations
-  const termData = academicRecord?.terms[selectedTerm];
+  const termData = academicRecord?.terms?.[selectedTerm];
   const grades = termData?.grades || [];
   const totalScoreSum = grades.reduce((sum, g) => sum + g.totalScore, 0);
   const averageScore = grades.length > 0 ? Math.round(totalScoreSum / grades.length) : 0;
@@ -844,7 +844,7 @@ Submit your solutions via the Givers World Mission High School Student Portal.
                     <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tuition Account Summary</h4>
                     
                     {[1, 2, 3].map((termNum) => {
-                      const tData = feeLedger.terms[termNum];
+                      const tData = feeLedger?.terms?.[termNum];
                       if (!tData) return null;
                       
                       const badgeStyles = {
@@ -894,7 +894,7 @@ Submit your solutions via the Givers World Mission High School Student Portal.
                   {(() => {
                     const allTx: Array<{ term: number; id: string; amount: number; date: string; paymentMethod: string; receiptNumber: string }> = [];
                     [1, 2, 3].forEach(tNum => {
-                      const termData = feeLedger.terms[tNum];
+                      const termData = feeLedger?.terms?.[tNum];
                       if (termData?.transactions) {
                         termData.transactions.forEach(tx => {
                           allTx.push({ ...tx, term: tNum });
@@ -1527,7 +1527,7 @@ Submit your solutions via the Givers World Mission High School Student Portal.
                     {/* Principal Sign-off */}
                     <div className="w-full pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-semibold">
                       <span>CEO/Principal: Evangelist Saint Turay</span>
-                      <span>Telephone: 034 055410</span>
+                      <span>Telephone: +232 74155000</span>
                     </div>
                   </div>
                 </div>

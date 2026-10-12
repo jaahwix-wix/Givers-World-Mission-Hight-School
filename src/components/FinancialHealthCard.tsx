@@ -60,9 +60,9 @@ export default function FinancialHealthCard({ students, fees, onNavigate }: Fina
       }
 
       const termData = ledger.terms[selectedTerm];
-      totalExpected += termData.totalDue;
-      totalCollected += termData.paidAmount;
-      totalOutstanding += termData.balance;
+      totalExpected += Number(termData.totalDue) || 0;
+      totalCollected += Number(termData.paidAmount) || 0;
+      totalOutstanding += Number(termData.balance) || 0;
 
       if (termData.status === 'Paid' || termData.balance <= 0) {
         paidCount++;

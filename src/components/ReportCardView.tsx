@@ -51,7 +51,7 @@ export default function ReportCardView({ students, records, onNavigateBack, init
     );
   }
 
-  const termData = record.terms[selectedTerm];
+  const termData = record?.terms?.[selectedTerm];
   const grades = termData?.grades || [];
 
   // Metrics

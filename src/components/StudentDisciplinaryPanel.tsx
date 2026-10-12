@@ -124,11 +124,9 @@ export default function StudentDisciplinaryPanel({ students }: StudentDisciplina
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this incident record?')) {
-      const updated = incidents.filter(i => i.id !== id);
-      saveIncidents(updated);
-      deleteFromFirestore('incidents', id);
-    }
+    const updated = incidents.filter(i => i.id !== id);
+    saveIncidents(updated);
+    deleteFromFirestore('incidents', id);
   };
 
   // Filter list

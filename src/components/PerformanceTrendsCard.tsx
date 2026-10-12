@@ -114,7 +114,7 @@ export default function PerformanceTrendsCard({ records, students, onNavigate }:
       const delta = (t1 > 0 && t3 > 0) ? Number((t3 - t1).toFixed(1)) : 0;
 
       // Make short display name for mobile readability
-      const shortName = cls.replace('Class ', 'C').replace('Nursery ', 'Nur ').replace('University ', 'Uni ');
+      const shortName = (cls || '').replace('Class ', 'C').replace('Nursery ', 'Nur ').replace('University ', 'Uni ');
 
       return {
         className: cls,

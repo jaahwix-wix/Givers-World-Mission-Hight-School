@@ -83,9 +83,9 @@ export default function GlobalHeader({ students, fees, activeTab, onNavigate, on
     if (!query) return [];
 
     return students.filter(student => 
-      student.name.toLowerCase().includes(query) ||
-      student.admissionNumber.toLowerCase().includes(query) ||
-      student.currentClass.toLowerCase().includes(query)
+      (student?.name || '').toLowerCase().includes(query) ||
+      (student?.admissionNumber || '').toLowerCase().includes(query) ||
+      (student?.currentClass || '').toLowerCase().includes(query)
     ).slice(0, 8); // Top 8 results
   }, [students, searchQuery]);
 

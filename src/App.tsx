@@ -66,6 +66,7 @@ import GlobalHeader from './components/GlobalHeader';
 import PrivilegesModal from './components/PrivilegesModal';
 import AccessRestricted from './components/AccessRestricted';
 import SessionLoginGate from './components/SessionLoginGate';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './context/AuthContext';
 import { AnimatePresence } from 'motion/react';
 
@@ -95,19 +96,31 @@ export default function App() {
     localStorage.setItem('sma_theme', theme);
   }, [theme]);
 
-  // Navigation State - Always defaults to open public website (no login/pin required)
-  const [viewMode, setViewMode] = useState<'website' | 'portal'>('website');
+  // Navigation State - Check URL query or saved preference on initial load
+  const [viewMode, setViewMode] = useState<'website' | 'portal'>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'portal' || params.get('view') === 'mis' || window.location.hash === '#mis') {
+        return 'portal';
+      }
+      const saved = localStorage.getItem('sma_view_mode');
+      if (saved === 'portal') return 'portal';
+    } catch {}
+    return 'website';
+  });
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [navigationArgs, setNavigationArgs] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Ensure public website mode is never locked and starts clean
+  // Ensure public website mode starts clean, and portal mode unlocks cleanly
   useEffect(() => {
+    localStorage.setItem('sma_view_mode', viewMode);
     if (viewMode === 'website') {
       setPortalActive(false);
       unlockSession();
     } else {
       setPortalActive(true);
+      unlockSession();
     }
   }, [viewMode, setPortalActive, unlockSession]);
 
@@ -711,16 +724,17 @@ export default function App() {
         />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8" id="workspace-viewport">
-          {/* RBAC Access Guard Check */}
-          {isCurrentTabRestricted ? (
-            <AccessRestricted 
-              moduleName={activeLinkMeta?.moduleName || 'Restricted Area'}
-              requiredPrivilege={activeLinkMeta?.requiredDesc || 'Role-specific privilege required'}
-              onNavigateHome={handleNavigateHome}
-              onOpenPrivileges={() => setIsPrivilegesModalOpen(true)}
-            />
-          ) : (
-            <>
+          <ErrorBoundary fallbackTitle="Management Module Refreshed">
+            {/* RBAC Access Guard Check */}
+            {isCurrentTabRestricted ? (
+              <AccessRestricted 
+                moduleName={activeLinkMeta?.moduleName || 'Restricted Area'}
+                requiredPrivilege={activeLinkMeta?.requiredDesc || 'Role-specific privilege required'}
+                onNavigateHome={handleNavigateHome}
+                onOpenPrivileges={() => setIsPrivilegesModalOpen(true)}
+              />
+            ) : (
+              <>
               {activeTab === 'dashboard' && (
                 <Dashboard 
                   students={students} 
@@ -830,6 +844,7 @@ export default function App() {
               )}
             </>
           )}
+          </ErrorBoundary>
         </main>
       </div>
 

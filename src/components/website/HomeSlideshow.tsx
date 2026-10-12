@@ -17,7 +17,8 @@ import {
   ShieldCheck,
   MapPin,
   Award,
-  Users
+  Users,
+  LayoutDashboard
 } from 'lucide-react';
 import { getSchoolPhotoSrc, onSchoolPhotosUpdated } from '../../utils/photoManager';
 
@@ -220,6 +221,16 @@ export default function HomeSlideshow({ onNavigate }: HomeSlideshowProps) {
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="flex flex-wrap items-center gap-3"
               >
+                <button
+                  type="button"
+                  onClick={() => onNavigate('mis')}
+                  className="px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm flex items-center gap-2 shadow-lg shadow-black/40 transition-all hover:scale-[1.02] cursor-pointer"
+                  id="slideshow-launch-mis-btn"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Launch MIS System</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => onNavigate(currentSlide.ctaAction)}

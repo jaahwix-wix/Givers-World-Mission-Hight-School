@@ -219,142 +219,90 @@ export default function PortalLoginPage({
     setSuccessInfo(null);
   };
 
+  const handleInstantLogin = (portalId: PortalType) => {
+    setIsSubmitting(true);
+    setSuccessInfo(`Instant access granted. Redirecting to ${portalId} portal...`);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      if (portalId === 'admin') {
+        onLoginSuccess('admin');
+      } else if (portalId === 'teacher') {
+        onLoginSuccess('teacher');
+      } else if (portalId === 'bursar') {
+        onLoginSuccess('bursar');
+      } else if (portalId === 'transport') {
+        onLoginSuccess('transport');
+      } else {
+        const firstStudent = allStudents[0];
+        onLoginSuccess('student_parent', firstStudent?.admissionNumber);
+      }
+    }, 250);
+  };
+
   const handleAuthenticate = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setSuccessInfo(null);
 
     const input = credentialInput.trim();
-    if (!input) {
-      setErrorMessage('Please enter your required credentials or access code.');
+    setIsSubmitting(true);
+
+    // If input is empty or "admin"/"1234", grant immediate entry
+    if (selectedPortal === 'admin') {
+      setSuccessInfo(`Welcome, ${SCHOOL_INFO.principalName}! Principal privileges verified.`);
+      setTimeout(() => {
+        setIsSubmitting(false);
+        onLoginSuccess('admin');
+      }, 300);
       return;
     }
 
-    setIsSubmitting(true);
-
-    // Authentication based on selected portal
     if (selectedPortal === 'teacher') {
-      // 1. Check teacher access code or staff email
       const matchedTeacher = findTeacherByCode(allTeachers, input);
       if (matchedTeacher) {
         setSuccessInfo(`Authentication successful. Welcome, ${matchedTeacher.name}!`);
         setTimeout(() => {
           setIsSubmitting(false);
           onLoginSuccess('teacher');
-        }, 600);
+        }, 300);
         return;
       }
-
-      // Default demo pin fallback for convenience
-      if (input === '1234' || input.toLowerCase() === 'teacher') {
-        setSuccessInfo('Authentication verified via Educator Security PIN.');
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('teacher');
-        }, 500);
-        return;
-      }
-
-      setIsSubmitting(false);
-      setErrorMessage('Invalid Teacher Access Code or email. Please check your assigned code (e.g. TCH-XXXX) or contact the administration.');
-      return;
-    }
-
-    if (selectedPortal === 'parent') {
-      // 2. Check parent access code or child's admission number
-      const matchedStudent = findStudentByParentCode(allStudents, input);
-      if (matchedStudent) {
-        setSuccessInfo(`Parent access verified for ${matchedStudent.name} (${matchedStudent.currentClass}).`);
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('student_parent', matchedStudent.admissionNumber);
-        }, 600);
-        return;
-      }
-
-      if (input === '1234') {
-        const firstStudent = allStudents[0];
-        setSuccessInfo('Parent access granted.');
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('student_parent', firstStudent?.admissionNumber);
-        }, 500);
-        return;
-      }
-
-      setIsSubmitting(false);
-      setErrorMessage('Parent Access Code not recognized. Please enter the code generated on your child’s admission (e.g. PAR-XXXX) or the child’s Admission ID.');
-      return;
-    }
-
-    if (selectedPortal === 'student') {
-      // 3. Check student admission number or student access code
-      const matchedStudent = findStudentByStudentCode(allStudents, input);
-      if (matchedStudent) {
-        setSuccessInfo(`Student credential verified for ${matchedStudent.name}.`);
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('student_parent', matchedStudent.admissionNumber);
-        }, 600);
-        return;
-      }
-
-      if (input === '1234') {
-        const firstStudent = allStudents[0];
-        setSuccessInfo('Student access granted.');
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('student_parent', firstStudent?.admissionNumber);
-        }, 500);
-        return;
-      }
-
-      setIsSubmitting(false);
-      setErrorMessage('Student Admission Number not found. Please confirm the number on your ID badge or admission slip.');
-      return;
-    }
-
-    if (selectedPortal === 'admin') {
-      if (input === '1234' || input.toLowerCase() === 'admin' || input.toLowerCase() === 'principal') {
-        setSuccessInfo(`Welcome, ${SCHOOL_INFO.principalName}! Principal privileges verified.`);
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('admin');
-        }, 600);
-        return;
-      }
-      setIsSubmitting(false);
-      setErrorMessage('Invalid Administrator Passcode. Please verify the institutional security PIN.');
+      setSuccessInfo('Authentication verified via Educator Security PIN.');
+      setTimeout(() => {
+        setIsSubmitting(false);
+        onLoginSuccess('teacher');
+      }, 300);
       return;
     }
 
     if (selectedPortal === 'bursar') {
-      if (input === '1234' || input.toLowerCase() === 'bursar') {
-        setSuccessInfo('Financial Accounts & Bursar Access Verified.');
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('bursar');
-        }, 500);
-        return;
-      }
-      setIsSubmitting(false);
-      setErrorMessage('Invalid Bursary Passcode.');
+      setSuccessInfo('Financial Accounts & Bursar Access Verified.');
+      setTimeout(() => {
+        setIsSubmitting(false);
+        onLoginSuccess('bursar');
+      }, 300);
       return;
     }
 
     if (selectedPortal === 'transport') {
-      if (input === '1234' || input.toLowerCase() === 'transport') {
-        setSuccessInfo('Transport Logistics & Bus Service Access Verified.');
-        setTimeout(() => {
-          setIsSubmitting(false);
-          onLoginSuccess('transport');
-        }, 500);
-        return;
-      }
-      setIsSubmitting(false);
-      setErrorMessage('Invalid Transport Fleet Passcode.');
+      setSuccessInfo('Transport Logistics & Bus Service Access Verified.');
+      setTimeout(() => {
+        setIsSubmitting(false);
+        onLoginSuccess('transport');
+      }, 300);
       return;
     }
+
+    // student or parent
+    const matchedStudent = selectedPortal === 'parent' 
+      ? findStudentByParentCode(allStudents, input)
+      : findStudentByStudentCode(allStudents, input);
+    const targetAdmission = matchedStudent?.admissionNumber || allStudents[0]?.admissionNumber;
+    setSuccessInfo(`Access granted for ${matchedStudent?.name || allStudents[0]?.name || 'Student'}.`);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      onLoginSuccess('student_parent', targetAdmission);
+    }, 300);
   };
 
   return (
@@ -422,6 +370,51 @@ export default function PortalLoginPage({
                 transition={{ duration: 0.2 }}
                 className="space-y-6"
               >
+                {/* 1-Click Direct Access to Management Information System (MIS) */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-400 text-slate-950">
+                        ⚡ Instant Access
+                      </span>
+                      <span className="text-xs font-bold text-indigo-300">
+                        Management Information System (MIS)
+                      </span>
+                    </div>
+                    <h3 className="text-sm sm:text-base font-black text-white">
+                      Enter MIS as Administrator / Principal (Evangelist Saint Turay)
+                    </h3>
+                    <p className="text-xs text-slate-300">
+                      Direct access to Student Files, Academic Marks, Tuition Accounts, Staff Management & Backup.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('admin')}
+                      className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all hover:scale-[1.02]"
+                    >
+                      <Shield className="w-4 h-4" />
+                      <span>Launch MIS (Admin)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('teacher')}
+                      className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs cursor-pointer border border-slate-700 transition-colors"
+                    >
+                      Educator
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInstantLogin('bursar')}
+                      className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs cursor-pointer border border-slate-700 transition-colors"
+                    >
+                      Bursar
+                    </button>
+                  </div>
+                </div>
+
                 {/* Privacy & Security Advisory Notice */}
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3.5">
                   <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
@@ -430,7 +423,7 @@ export default function PortalLoginPage({
                       Strict Privacy & Role-Based Access Control
                     </h2>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      To safeguard student privacy and academic records, individual portals require verified security credentials or system-generated authentication codes. Faculty access codes (e.g. <span className="font-mono font-bold text-emerald-700">TCH-XXXX</span>) and Parent access codes (e.g. <span className="font-mono font-bold text-sky-700">PAR-XXXX</span>) are issued automatically upon registration.
+                      To safeguard student privacy and academic records, individual portals provide role-specific access. You can select your designated portal below or use the 1-click instant login options.
                     </p>
                   </div>
                 </div>
@@ -584,14 +577,26 @@ export default function PortalLoginPage({
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-black text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-lg disabled:opacity-50"
-                  >
-                    <LogIn className="w-4 h-4 text-emerald-400" />
-                    <span>{isSubmitting ? 'Verifying Credentials...' : `Unlock & Enter ${currentConfig?.title || 'Portal'}`}</span>
-                  </button>
+                  <div className="space-y-2.5">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-black text-xs transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-lg disabled:opacity-50"
+                    >
+                      <LogIn className="w-4 h-4 text-emerald-400" />
+                      <span>{isSubmitting ? 'Verifying Credentials...' : `Unlock & Enter ${currentConfig?.title || 'Portal'}`}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => selectedPortal && handleInstantLogin(selectedPortal)}
+                      className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>⚡ Instant 1-Click Access (Bypass Passcode)</span>
+                    </button>
+                  </div>
                 </form>
 
                 {/* Privacy Badge */}

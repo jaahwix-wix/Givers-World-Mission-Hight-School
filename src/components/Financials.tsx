@@ -159,7 +159,7 @@ export default function Financials({ students, fees, onAddTransaction, initialSt
     return fees.filter(f => {
       const s = students.find(stud => stud.id === f.studentId);
       if (!s || s.status !== 'Active') return false;
-      const termFee = f.terms[selectedTermFilter];
+      const termFee = f?.terms?.[selectedTermFilter];
       return termFee && (termFee.status === 'Unpaid' || termFee.status === 'Partial') && termFee.balance > 0;
     }).length;
   }, [fees, students, selectedTermFilter]);

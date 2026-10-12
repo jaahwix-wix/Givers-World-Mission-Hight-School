@@ -32,13 +32,13 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
         <div className="max-w-3xl space-y-3 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 text-emerald-200 text-xs font-bold">
             <MapPin className="w-3.5 h-3.5" />
-            <span>Kambia 1, Northern Province, Sierra Leone</span>
+            <span>Kambia Town, Sierra Leone</span>
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
             About Givers World Mission Diplomats Academy & College
           </h1>
           <p className="text-base text-slate-300 font-normal leading-relaxed">
-            Home of the <strong>Eagles Squad</strong> — Pioneering excellence in Christian pedagogy, academic rigor, moral integrity, and community empowerment in Kambia 1 since 1998.
+            Home of the <strong>Eagles Squad</strong> — Pioneering excellence in Christian pedagogy, academic rigor, moral integrity, and community empowerment in Kambia 1 since 2000.
           </p>
         </div>
       </section>
@@ -202,7 +202,7 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
-      {/* Location in Kambia 1 & Accreditation */}
+      {/* Location in Kambia Town & Compound Physical Address */}
       <section className="bg-emerald-50 border border-emerald-200 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -210,12 +210,21 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
               <MapPin className="w-5 h-5" />
             </span>
             <h3 className="text-lg font-black text-slate-900">
-              Campus Location: Kambia 1, Northern Province
+              Compound Physical Address
             </h3>
           </div>
-          <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-            Situated strategically in Kambia 1 along the central transit corridor, our campus features multi-story modern academic halls, dedicated ICT lab, science workshops, and school bus routes.
+          <p className="text-sm font-bold text-slate-900">
+            Givers World Mission Compound Kambia Town Sierra Leone.
           </p>
+          <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+            Situated strategically along the central corridor in Kambia Town, our campus features multi-story modern academic halls, dedicated ICT lab, science workshops, and school bus routes.
+          </p>
+          <div className="pt-1 flex flex-wrap items-center gap-3 text-xs text-slate-700">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-900 bg-emerald-100/80 px-3 py-1.5 rounded-xl border border-emerald-200">
+              <span className="font-bold">Phone & SMS Inquiries:</span>
+              <a href="tel:+23274155000" className="font-mono font-black text-emerald-800 hover:underline">+232 74155000</a>
+            </span>
+          </div>
         </div>
 
         <button

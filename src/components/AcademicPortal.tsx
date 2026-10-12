@@ -102,7 +102,7 @@ export default function AcademicPortal({
     });
 
     return terms.map(termNum => {
-      const termPerf = activeRecord.terms[termNum];
+      const termPerf = activeRecord?.terms?.[termNum];
       const studentGrades = termPerf?.grades || [];
       const studentAvg = studentGrades.length > 0
         ? Math.round(studentGrades.reduce((sum, g) => sum + g.totalScore, 0) / studentGrades.length)
@@ -112,7 +112,7 @@ export default function AcademicPortal({
       let classSum = 0;
       let classCount = 0;
       classRecords.forEach(cr => {
-        const cGrades = cr.terms[termNum]?.grades || [];
+        const cGrades = cr?.terms?.[termNum]?.grades || [];
         if (cGrades.length > 0) {
           classSum += cGrades.reduce((s, g) => s + g.totalScore, 0) / cGrades.length;
           classCount++;
@@ -186,10 +186,10 @@ export default function AcademicPortal({
   // Start editing grades
   const startEditing = () => {
     if (!activeRecord || !activeStudent) return;
-    const termPerf = activeRecord.terms[selectedTerm];
+    const termPerf = activeRecord?.terms?.[selectedTerm];
     
     // If the record doesn't have grades yet, initialize with blank grades for subjects
-    let gradesToLoad = termPerf.grades;
+    let gradesToLoad = termPerf?.grades || [];
     if (gradesToLoad.length === 0) {
       const subjects = getSubjectsForClass(activeStudent.currentClass, activeStudent.stream);
       gradesToLoad = subjects.map((subj, idx) => {
@@ -611,7 +611,7 @@ export default function AcademicPortal({
                         <div className="flex items-baseline gap-1.5 mt-0.5">
                           <span className="text-base font-black text-indigo-700">{trendMetrics.yearAverage}%</span>
                           <span className="text-[10px] text-slate-500 font-semibold">
-                            {calculateGrade(trendMetrics.yearAverage, selectedClass)}
+                            ({calculateGrade(trendMetrics.yearAverage, selectedClass).grade})
                           </span>
                         </div>
                       </div>

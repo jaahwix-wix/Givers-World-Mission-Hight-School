@@ -23,16 +23,20 @@ import {
 import firebaseConfig from '../firebase-applet-config.json';
 import { UserRole, RolePrivileges, AuthUser } from './types';
 
-// Initialize Firebase App with environment variable override if provided
+// Permanent embedded Firebase API Key for zero-prompt instant initialization
+export const EMBEDDED_FIREBASE_API_KEY = 'AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0';
+
+// Initialize Firebase App with guaranteed embedded API key
 const resolvedApiKey = 
+  firebaseConfig.apiKey ||
+  EMBEDDED_FIREBASE_API_KEY ||
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FIREBASE_API_KEY) ||
   (typeof process !== 'undefined' && (process.env?.VITE_FIREBASE_API_KEY || process.env?.FIREBASE_API_KEY)) ||
-  firebaseConfig.apiKey ||
   'AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0';
 
 const activeFirebaseConfig = {
   ...firebaseConfig,
-  apiKey: resolvedApiKey,
+  apiKey: resolvedApiKey || EMBEDDED_FIREBASE_API_KEY,
 };
 
 const app = initializeApp(activeFirebaseConfig);

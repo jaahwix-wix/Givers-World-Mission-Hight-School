@@ -16,7 +16,8 @@ import {
   ShieldCheck,
   ChevronRight,
   ExternalLink,
-  Camera
+  Camera,
+  LayoutDashboard
 } from 'lucide-react';
 import schoolLogo from '../../assets/logo.jpg';
 import { SCHOOL_INFO } from '../../initialData';
@@ -25,10 +26,11 @@ import PhotoSyncModal from './PhotoSyncModal';
 interface WebsiteNavbarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
+  onEnterMIS?: () => void;
   noticeCount?: number;
 }
 
-export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0 }: WebsiteNavbarProps) {
+export default function WebsiteNavbar({ currentPage, onNavigate, onEnterMIS, noticeCount = 0 }: WebsiteNavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isPhotoSyncOpen, setIsPhotoSyncOpen] = useState(false);
 
@@ -166,14 +168,27 @@ export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0
             <span>Real Photos</span>
           </button>
 
+          {onEnterMIS && (
+            <button
+              type="button"
+              onClick={onEnterMIS}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-xs shadow-md shadow-indigo-950/20 transition-all hover:scale-[1.02] cursor-pointer"
+              id="navbar-launch-mis-direct-btn"
+              title="Launch the Full Management Information System (Admin Dashboard)"
+            >
+              <LayoutDashboard className="w-4 h-4 text-amber-300" />
+              <span>Launch MIS</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => handleNavClick('login')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm transition-all hover:shadow-md cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs shadow-sm transition-all hover:shadow-md cursor-pointer border border-slate-700/80"
             id="navbar-portal-login-btn"
           >
             <LogIn className="w-4 h-4 text-emerald-400" />
-            <span>Management Portal</span>
+            <span>Portals</span>
           </button>
         </div>
 
@@ -242,14 +257,28 @@ export default function WebsiteNavbar({ currentPage, onNavigate, noticeCount = 0
             );
           })}
 
-          <div className="pt-4 border-t border-slate-100 mt-3">
+          <div className="pt-4 border-t border-slate-100 mt-3 space-y-2">
+            {onEnterMIS && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onEnterMIS();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-indigo-600 text-white font-black text-sm shadow-md"
+              >
+                <LayoutDashboard className="w-4 h-4 text-amber-300" />
+                <span>Launch MIS Dashboard</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => handleNavClick('login')}
               className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-white font-black text-sm shadow-md"
             >
               <LogIn className="w-4 h-4 text-emerald-400" />
-              <span>Enter Management Portal</span>
+              <span>Enter Management Portals</span>
             </button>
           </div>
         </div>

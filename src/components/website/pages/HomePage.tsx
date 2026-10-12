@@ -20,7 +20,8 @@ import {
   Smartphone,
   ChevronRight,
   MapPin,
-  FileText
+  FileText,
+  LayoutDashboard
 } from 'lucide-react';
 import HomeSlideshow from '../HomeSlideshow';
 import { SCHOOL_INFO } from '../../../initialData';
@@ -46,7 +47,51 @@ export default function HomePage({ onNavigate, notices }: HomePageProps) {
         <HomeSlideshow onNavigate={onNavigate} />
       </section>
 
-      {/* 2. LIVE ANNOUNCEMENTS & SMS DISPATCH TICKER */}
+      {/* 2. MANAGEMENT INFORMATION SYSTEM (MIS) DIRECT ACCESS BANNER */}
+      <ScrollFadeIn direction="up">
+        <section className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 sm:p-6 shadow-xl border border-indigo-500/30 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6" id="mis-direct-banner">
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500 text-slate-950 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                Live Active System
+              </span>
+              <span className="text-xs font-bold text-amber-300">
+                School Management Information System (MIS)
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+              Access Student Records, Academic Scores & Institutional Controls
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+              Official information system for Givers World Mission Diplomats Academy & College: Continuous Assessments, WAEC Preps, Tuition Bursary, Fleet Bus Logistics, and Staff Directory.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+            <button
+              type="button"
+              onClick={() => onNavigate('mis')}
+              className="flex-1 lg:flex-none px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 transition-all hover:scale-[1.02] cursor-pointer"
+              id="home-launch-mis-btn"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Enter MIS Dashboard</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('login')}
+              className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
+            >
+              <span>Choose Role</span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+          </div>
+        </section>
+      </ScrollFadeIn>
+
+      {/* 3. LIVE ANNOUNCEMENTS & SMS DISPATCH TICKER */}
       <ScrollFadeIn direction="up">
         <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 shadow-xs" id="live-notices-ticker">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">

@@ -185,20 +185,18 @@ export default function BusManagement({ students }: BusManagementProps) {
   };
 
   const handleBusDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this school bus? This will unassign all students.')) {
-      const updatedBuses = buses.filter(b => b.id !== id);
-      saveBuses(updatedBuses);
-      deleteFromFirestore('buses', id);
-      
-      // Remove assignments
-      const updatedAssignments = { ...assignments };
-      Object.keys(updatedAssignments).forEach(studId => {
-        if (updatedAssignments[studId] === id) {
-          delete updatedAssignments[studId];
-        }
-      });
-      saveAssignments(updatedAssignments);
-    }
+    const updatedBuses = buses.filter(b => b.id !== id);
+    saveBuses(updatedBuses);
+    deleteFromFirestore('buses', id);
+    
+    // Remove assignments
+    const updatedAssignments = { ...assignments };
+    Object.keys(updatedAssignments).forEach(studId => {
+      if (updatedAssignments[studId] === id) {
+        delete updatedAssignments[studId];
+      }
+    });
+    saveAssignments(updatedAssignments);
   };
 
   // Assign Student

@@ -230,11 +230,9 @@ export default function Library({ students }: LibraryProps) {
   };
 
   const handleBookDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this book from the catalog?')) {
-      const updated = books.filter(b => b.id !== id);
-      saveBooks(updated);
-      deleteFromFirestore('library_books', id);
-    }
+    const updated = books.filter(b => b.id !== id);
+    saveBooks(updated);
+    deleteFromFirestore('library_books', id);
   };
 
   // Manage checkout/return handlers
@@ -312,16 +310,14 @@ export default function Library({ students }: LibraryProps) {
   };
 
   const handleWaiveFine = (coId: string) => {
-    if (window.confirm('Are you sure you want to waive this overdue fine?')) {
-      const target = checkouts.find(co => co.id === coId);
-      const updated = checkouts.map(co => co.id === coId ? {
-        ...co,
-        fineAmount: 0
-      } : co);
-      saveCheckouts(updated);
-      if (target) {
-        saveToFirestore('library_checkouts', target.id, { ...target, fineAmount: 0 });
-      }
+    const target = checkouts.find(co => co.id === coId);
+    const updated = checkouts.map(co => co.id === coId ? {
+      ...co,
+      fineAmount: 0
+    } : co);
+    saveCheckouts(updated);
+    if (target) {
+      saveToFirestore('library_checkouts', target.id, { ...target, fineAmount: 0 });
     }
   };
 
@@ -607,7 +603,7 @@ export default function Library({ students }: LibraryProps) {
                       <td className="py-3 px-4 text-right">
                         {co.status !== 'Returned' ? (
                           <button
-                            onClick={() => handleReturnBook(co.id)}
+                            onClick={() => handleReturnBook(co)}
                             className="inline-flex items-center gap-1 py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer"
                           >
                             <UserMinus className="w-3 h-3" /> Mark Returned

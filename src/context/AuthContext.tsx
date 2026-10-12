@@ -39,7 +39,7 @@ const BOOTSTRAPPED_ADMIN_EMAILS = [
   'jaahwix@gmail.com',
   'nabieumelissajosephine@gmail.com'
 ];
-const INACTIVITY_TIMEOUT_SECONDS = 60; // 1 minute inactivity timeout
+const INACTIVITY_TIMEOUT_SECONDS = 1800; // 30 minutes idle timeout
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -169,7 +169,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Portal Active State (public website vs management portal)
-  const [isPortalActive, setIsPortalActive] = useState<boolean>(false);
+  const [isPortalActive, setIsPortalActiveRaw] = useState<boolean>(false);
+
+  const handleSetPortalActive = useCallback((active: boolean) => {
+    setIsPortalActiveRaw(active);
+    if (active) {
+      setIsSessionLocked(false);
+      sessionStorage.removeItem('sma_session_locked');
+      lastActivityRef.current = Date.now();
+      setSecondsRemaining(INACTIVITY_TIMEOUT_SECONDS);
+    }
+  }, []);
 
   // Inactivity & Session Lock State - always unlocked by default for public visitors
   const [isSessionLocked, setIsSessionLocked] = useState<boolean>(false);
@@ -179,6 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Ensure public visitors start with clean unlocked session on fresh loads
   useEffect(() => {
     sessionStorage.removeItem('sma_session_locked');
+    setIsSessionLocked(false);
+    lastActivityRef.current = Date.now();
   }, []);
 
   // Function to lock session (only applicable when in portal)
@@ -276,7 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(DEMO_PRESET_USERS.admin);
       localStorage.removeItem('sma_active_role');
       setIsSessionLocked(false);
-      setIsPortalActive(false);
+      setIsPortalActiveRaw(false);
       sessionStorage.removeItem('sma_session_locked');
       setSecondsRemaining(INACTIVITY_TIMEOUT_SECONDS);
     } catch (error) {
@@ -346,7 +358,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unlockSession,
         resetInactivityTimer,
         isPortalActive,
-        setPortalActive: setIsPortalActive,
+        setPortalActive: handleSetPortalActive,
       }}
     >
       {children}

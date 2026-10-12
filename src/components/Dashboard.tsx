@@ -103,16 +103,16 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
   // GPA Distribution Data mapping for recharts
   const gpaData = useMemo(() => {
     const tiers = [
-      { name: 'Pre-School', filter: (c: string) => c.startsWith('Pre') || c.startsWith('Prep') },
-      { name: 'Nursery', filter: (c: string) => c.startsWith('Nursery') },
-      { name: 'Primary', filter: (c: string) => c.startsWith('Class') },
-      { name: 'JSS', filter: (c: string) => c.startsWith('JSS') },
-      { name: 'SSS', filter: (c: string) => c.startsWith('SSS') },
-      { name: 'University', filter: (c: string) => c.startsWith('University') },
+      { name: 'Pre-School', filter: (c: string) => Boolean(c && (c.startsWith('Pre') || c.startsWith('Prep'))) },
+      { name: 'Nursery', filter: (c: string) => Boolean(c && c.startsWith('Nursery')) },
+      { name: 'Primary', filter: (c: string) => Boolean(c && c.startsWith('Class')) },
+      { name: 'JSS', filter: (c: string) => Boolean(c && c.startsWith('JSS')) },
+      { name: 'SSS', filter: (c: string) => Boolean(c && c.startsWith('SSS')) },
+      { name: 'University', filter: (c: string) => Boolean(c && c.startsWith('University')) },
     ];
 
     return tiers.map(tier => {
-      const tierStudents = activeStudents.filter(s => tier.filter(s.currentClass));
+      const tierStudents = activeStudents.filter(s => s && tier.filter(s.currentClass || ''));
       let honorsHigh = 0; // 3.5 - 4.0
       let honors = 0;     // 3.0 - 3.49
       let passing = 0;    // 2.0 - 2.99
@@ -122,10 +122,13 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
 
       tierStudents.forEach(student => {
         const record = records.find(r => r.studentId === student.id);
-        if (record) {
-          const grades = record.terms[3].grades.length > 0 ? record.terms[3].grades :
-                         record.terms[2].grades.length > 0 ? record.terms[2].grades :
-                         record.terms[1].grades.length > 0 ? record.terms[1].grades : [];
+        if (record && record.terms) {
+          const t3Grades = record.terms[3]?.grades || [];
+          const t2Grades = record.terms[2]?.grades || [];
+          const t1Grades = record.terms[1]?.grades || [];
+          const grades = t3Grades.length > 0 ? t3Grades :
+                         t2Grades.length > 0 ? t2Grades :
+                         t1Grades.length > 0 ? t1Grades : [];
           if (grades.length > 0) {
             const totalGpa = grades.reduce((sum, g) => {
               const score = g.totalScore;
@@ -177,9 +180,11 @@ export default function Dashboard({ students, records, examPreps, fees, onNaviga
   fees.forEach(ledger => {
     // Sum outstanding balances for active students
     const activeStud = activeStudents.find(s => s.id === ledger.studentId);
-    if (activeStud) {
+    if (activeStud && ledger && ledger.terms) {
       Object.values(ledger.terms).forEach(term => {
-        totalOutstanding += term.balance;
+        if (term && typeof term.balance === 'number') {
+          totalOutstanding += term.balance;
+        }
       });
     }
   });
@@ -338,30 +343,35 @@ CEO/Principal, Givers World Mission`;
     return pendingFeeStudents.filter(item => {
       const matchesStatus = pendingStatusFilter === 'All' || item.status === pendingStatusFilter;
       const query = pendingSearchQuery.trim().toLowerCase();
+      const s = item.student;
+      if (!s) return false;
       const matchesQuery = !query || 
-        item.student.name.toLowerCase().includes(query) ||
-        item.student.admissionNumber.toLowerCase().includes(query) ||
-        item.student.currentClass.toLowerCase().includes(query);
+        (s.name || '').toLowerCase().includes(query) ||
+        (s.admissionNumber || '').toLowerCase().includes(query) ||
+        (s.currentClass || '').toLowerCase().includes(query);
 
       return matchesStatus && matchesQuery;
     });
   }, [pendingFeeStudents, pendingSearchQuery, pendingStatusFilter]);
 
   const totalPendingBalanceForTerm = useMemo(() => {
-    return pendingFeeStudents.reduce((sum, item) => sum + item.balance, 0);
+    return pendingFeeStudents.reduce((sum, item) => sum + (item.balance || 0), 0);
   }, [pendingFeeStudents]);
 
   // National Exam Candidates
-  const examCandidateCount = examPreps.filter(ep => ep.registered).length;
+  const examCandidateCount = examPreps.filter(ep => ep && ep.registered).length;
 
   // Average Score across school (Term 3 averages)
   let sumAverage = 0;
   let recordCount = 0;
   records.forEach(r => {
-    const isTerm3Active = r.terms[3].grades.length > 0;
-    const grades = isTerm3Active ? r.terms[3].grades : r.terms[2].grades;
+    if (!r || !r.terms) return;
+    const t3Grades = r.terms[3]?.grades || [];
+    const t2Grades = r.terms[2]?.grades || [];
+    const t1Grades = r.terms[1]?.grades || [];
+    const grades = t3Grades.length > 0 ? t3Grades : (t2Grades.length > 0 ? t2Grades : t1Grades);
     if (grades.length > 0) {
-      const avg = grades.reduce((sum, g) => sum + g.totalScore, 0) / grades.length;
+      const avg = grades.reduce((sum, g) => sum + (g?.totalScore || 0), 0) / grades.length;
       sumAverage += avg;
       recordCount++;
     }
@@ -370,12 +380,12 @@ CEO/Principal, Givers World Mission`;
 
   // Class distribution calculation
   const levelCounts = {
-    'Pre-School': activeStudents.filter(s => s.currentClass.startsWith('Pre') || s.currentClass.startsWith('Prep')).length,
-    Nursery: activeStudents.filter(s => s.currentClass.startsWith('Nursery')).length,
-    Primary: activeStudents.filter(s => s.currentClass.startsWith('Class')).length,
-    JSS: activeStudents.filter(s => s.currentClass.startsWith('JSS')).length,
-    SSS: activeStudents.filter(s => s.currentClass.startsWith('SSS')).length,
-    University: activeStudents.filter(s => s.currentClass.startsWith('University')).length,
+    'Pre-School': activeStudents.filter(s => (s?.currentClass || '').startsWith('Pre') || (s?.currentClass || '').startsWith('Prep')).length,
+    Nursery: activeStudents.filter(s => (s?.currentClass || '').startsWith('Nursery')).length,
+    Primary: activeStudents.filter(s => (s?.currentClass || '').startsWith('Class')).length,
+    JSS: activeStudents.filter(s => (s?.currentClass || '').startsWith('JSS')).length,
+    SSS: activeStudents.filter(s => (s?.currentClass || '').startsWith('SSS')).length,
+    University: activeStudents.filter(s => (s?.currentClass || '').startsWith('University')).length,
   };
 
   const levelColors = {
@@ -392,9 +402,13 @@ CEO/Principal, Givers World Mission`;
     .map(r => {
       const student = students.find(s => s.id === r.studentId);
       if (!student || student.status !== 'Active') return null;
-      const grades = r.terms[3].grades.length > 0 ? r.terms[3].grades : r.terms[2].grades;
+      if (!r || !r.terms) return null;
+      const t3Grades = r.terms[3]?.grades || [];
+      const t2Grades = r.terms[2]?.grades || [];
+      const t1Grades = r.terms[1]?.grades || [];
+      const grades = t3Grades.length > 0 ? t3Grades : (t2Grades.length > 0 ? t2Grades : t1Grades);
       if (grades.length === 0) return null;
-      const average = Math.round(grades.reduce((sum, g) => sum + g.totalScore, 0) / grades.length);
+      const average = Math.round(grades.reduce((sum, g) => sum + (g?.totalScore || 0), 0) / grades.length);
       return { student, average };
     })
     .filter((p): p is { student: Student; average: number } => p !== null && p.average >= 75)
@@ -405,16 +419,19 @@ CEO/Principal, Givers World Mission`;
     .filter(ep => {
       const student = students.find(s => s.id === ep.studentId);
       if (!student || student.status !== 'Active') return false;
-      const scores = ep.subjectsScores;
-      const avgMock = scores.reduce((sum, s) => sum + s.mockScore, 0) / scores.length;
+      const scores = ep?.subjectsScores || [];
+      if (scores.length === 0) return false;
+      const avgMock = scores.reduce((sum, s) => sum + (s?.mockScore || 0), 0) / scores.length;
       return avgMock < 55;
     })
     .map(ep => {
-      const student = students.find(s => s.id === ep.studentId)!;
-      const scores = ep.subjectsScores;
-      const avgMock = Math.round(scores.reduce((sum, s) => sum + s.mockScore, 0) / scores.length);
+      const student = students.find(s => s.id === ep.studentId);
+      if (!student) return null;
+      const scores = ep?.subjectsScores || [];
+      const avgMock = scores.length > 0 ? Math.round(scores.reduce((sum, s) => sum + (s?.mockScore || 0), 0) / scores.length) : 0;
       return { student, type: ep.examType, average: avgMock };
-    });
+    })
+    .filter((item): item is { student: Student; type: any; average: number } => item !== null);
 
   // Attendance rate calculation across school levels for current term (Term 3)
   const attendanceData = useMemo(() => {
@@ -432,17 +449,18 @@ CEO/Principal, Givers World Mission`;
       if (!student || student.status !== 'Active') return;
 
       let key = 'Primary';
-      if (student.currentClass.startsWith('Pre') || student.currentClass.startsWith('Prep')) key = 'PreSchool';
-      else if (student.currentClass.startsWith('Nursery')) key = 'Nursery';
-      else if (student.currentClass.startsWith('Class')) key = 'Primary';
-      else if (student.currentClass.startsWith('JSS')) key = 'JSS';
-      else if (student.currentClass.startsWith('SSS')) key = 'SSS';
-      else if (student.currentClass.startsWith('University')) key = 'University';
+      const c = student.currentClass || '';
+      if (c.startsWith('Pre') || c.startsWith('Prep')) key = 'PreSchool';
+      else if (c.startsWith('Nursery')) key = 'Nursery';
+      else if (c.startsWith('Class')) key = 'Primary';
+      else if (c.startsWith('JSS')) key = 'JSS';
+      else if (c.startsWith('SSS')) key = 'SSS';
+      else if (c.startsWith('University')) key = 'University';
 
-      const att = r.terms[3]?.attendance || r.terms[2]?.attendance;
+      const att = r?.terms?.[3]?.attendance || r?.terms?.[2]?.attendance || r?.terms?.[1]?.attendance;
       if (att && levels[key]) {
-        levels[key].present += att.presentDays;
-        levels[key].total += att.totalDays;
+        levels[key].present += att.presentDays || 0;
+        levels[key].total += att.totalDays || 0;
       }
     });
 
@@ -496,8 +514,8 @@ CEO/Principal, Givers World Mission`;
             </p>
             <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-400 border-t border-slate-800 pt-3">
               <div><span className="text-slate-200 font-semibold">CEO/Principal:</span> Evangelist Saint Turay</div>
-              <div><span className="text-slate-200 font-semibold">Telephone:</span> 034 055410</div>
-              <div><span className="text-slate-200 font-semibold">Campus:</span> Kambia 2, Northern Province</div>
+              <div><span className="text-slate-200 font-semibold">Telephone:</span> +232 74155000</div>
+              <div><span className="text-slate-200 font-semibold">Campus:</span> Givers World Mission Compound Kambia Town</div>
               <div><span className="text-slate-200 font-semibold">Academic Cycle:</span> 2025/2026</div>
             </div>
           </div>
@@ -570,13 +588,13 @@ CEO/Principal, Givers World Mission`;
                   <div className="min-w-0">
                     <span className="text-[9px] font-bold uppercase text-slate-400 block leading-none">Telephone Contact</span>
                     <span className="font-mono text-xs font-black text-slate-900 truncate block mt-0.5">
-                      Telephone: 034 055410
+                      Telephone: +232 74155000
                     </span>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopyPhone('034 055410')}
+                  onClick={() => handleCopyPhone('+232 74155000')}
                   className="px-2 py-1 bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-[10px] font-bold rounded border border-slate-200 transition-colors cursor-pointer flex items-center gap-1 shrink-0"
                   title="Copy telephone number"
                 >
@@ -589,14 +607,14 @@ CEO/Principal, Givers World Mission`;
             {/* Quick Actions */}
             <div className="flex items-center gap-2 pt-2 border-t border-indigo-100/80">
               <a
-                href="tel:034055410"
+                href="tel:+23274155000"
                 className="flex-1 py-1.5 px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
               >
                 <PhoneCall className="w-3.5 h-3.5" />
-                <span>Call 034 055410</span>
+                <span>Call +232 74155000</span>
               </a>
               <a
-                href="sms:034055410"
+                href="sms:+23274155000"
                 className="py-1.5 px-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1 shadow-2xs"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
@@ -627,7 +645,7 @@ CEO/Principal, Givers World Mission`;
                 <div>
                   <span className="text-[10px] font-bold uppercase text-slate-400 block">Campus Administration Line</span>
                   <p className="font-mono text-xs font-bold text-slate-800 mt-0.5">
-                    Telephone: 034 055410
+                    Telephone: +232 74155000
                   </p>
                 </div>
               </div>

@@ -76,12 +76,14 @@ export default function PendingFeeAlertWidget({
   const filteredStudents = useMemo(() => {
     return pendingStudentsAll.filter(item => {
       const s = item.student;
-      const matchesSearch = 
-        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.admissionNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.currentClass.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (s.parentName && s.parentName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (s.parentPhone && s.parentPhone.toLowerCase().includes(searchQuery.toLowerCase()));
+      if (!s) return false;
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q ||
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.admissionNumber || '').toLowerCase().includes(q) ||
+        (s.currentClass || '').toLowerCase().includes(q) ||
+        Boolean(s.parentName && s.parentName.toLowerCase().includes(q)) ||
+        Boolean(s.parentPhone && s.parentPhone.toLowerCase().includes(q));
 
       const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
       return matchesSearch && matchesStatus;

@@ -122,10 +122,8 @@ export default function PhotoSyncModal({ isOpen, onClose }: PhotoSyncModalProps)
   };
 
   const handleReset = () => {
-    if (window.confirm('Reset all synced photos back to defaults?')) {
-      clearStoredSchoolPhotos();
-      refreshSyncStatus();
-    }
+    clearStoredSchoolPhotos();
+    refreshSyncStatus();
   };
 
   return (

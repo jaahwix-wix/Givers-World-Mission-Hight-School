@@ -379,11 +379,9 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
   };
 
   const handleTeacherDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this staff record?')) {
-      const updated = teachers.filter(t => t.id !== id);
-      saveTeachers(updated);
-      deleteFromFirestore('teachers', id);
-    }
+    const updated = teachers.filter(t => t.id !== id);
+    saveTeachers(updated);
+    deleteFromFirestore('teachers', id);
   };
 
   // Toggle Single Payroll Status shortcut
@@ -440,17 +438,15 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
   };
 
   const handleDeleteAssignment = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this assignment?')) {
-      const updated = assignments.filter(a => a.id !== id);
-      saveAssignments(updated);
-      deleteFromFirestore('assignments', id);
-      
-      // Also delete corresponding submissions
-      const subsToDelete = submissions.filter(s => s.assignmentId === id);
-      subsToDelete.forEach(sub => deleteFromFirestore('submissions', sub.id));
-      const updatedSubs = submissions.filter(s => s.assignmentId !== id);
-      saveSubmissions(updatedSubs);
-    }
+    const updated = assignments.filter(a => a.id !== id);
+    saveAssignments(updated);
+    deleteFromFirestore('assignments', id);
+    
+    // Also delete corresponding submissions
+    const subsToDelete = submissions.filter(s => s.assignmentId === id);
+    subsToDelete.forEach(sub => deleteFromFirestore('submissions', sub.id));
+    const updatedSubs = submissions.filter(s => s.assignmentId !== id);
+    saveSubmissions(updatedSubs);
   };
 
   // Grade Submission Submit
@@ -623,7 +619,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                         <div>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <h4 className="font-bold text-slate-800 text-sm leading-tight">{teacher.name}</h4>
-                            {(teacher.verified || teacher.isVerified) ? (
+                            {teacher.verified ? (
                               <span 
                                 className="inline-flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 title={`Verified Staff by ${teacher.verifiedBy || `${SCHOOL_INFO.principalName} (Principal)`} on ${teacher.verifiedAt || 'Current Session'}`}
@@ -759,14 +755,14 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                           type="button"
                           onClick={() => handleToggleVerifyTeacher(teacher)}
                           className={`py-1.5 px-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                            (teacher.verified || teacher.isVerified)
+                            teacher.verified
                               ? 'bg-emerald-50 hover:bg-rose-50 text-emerald-700 hover:text-rose-700 border border-emerald-200'
                               : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
                           }`}
-                          title={(teacher.verified || teacher.isVerified) ? 'Click to revoke staff verification' : `Verify staff as Administrator (Principal: ${SCHOOL_INFO.principalName})`}
+                          title={teacher.verified ? 'Click to revoke staff verification' : `Verify staff as Administrator (Principal: ${SCHOOL_INFO.principalName})`}
                         >
-                          <ShieldCheck className={`w-3.5 h-3.5 ${(teacher.verified || teacher.isVerified) ? 'text-emerald-600' : 'text-white'}`} />
-                          <span>{(teacher.verified || teacher.isVerified) ? 'Verified' : 'Verify'}</span>
+                          <ShieldCheck className={`w-3.5 h-3.5 ${teacher.verified ? 'text-emerald-600' : 'text-white'}`} />
+                          <span>{teacher.verified ? 'Verified' : 'Verify'}</span>
                         </button>
                       ) : (
                         <div 
@@ -774,7 +770,7 @@ ${sub.feedback || 'Pending educator grading and remarks.'}
                           title={`Verification restricted to the Administrator (${SCHOOL_INFO.principalName})`}
                         >
                           <Lock className="w-3 h-3 text-slate-400" />
-                          <span>{(teacher.verified || teacher.isVerified) ? 'Verified' : 'Unverified'}</span>
+                          <span>{teacher.verified ? 'Verified' : 'Unverified'}</span>
                         </div>
                       )}
 

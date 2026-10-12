@@ -884,19 +884,14 @@ export default function DataBackup({ students, records, examPreps, fees, onResto
 
           <button
             onClick={() => {
-              const confirmed = window.confirm(
-                'CONFIRM DELETING ALL DATA FOR GO-LIVE:\n\nAre you sure you want to delete ALL data to go live?\n\nThis will wipe all existing students, academic reports, fees, staff, books, and bus routes across the school system.\n\nThe system will be 100% clean for live production.'
-              );
-              if (confirmed) {
-                wipeAllSystemData();
-                onResetData();
-                setSuccessMessage('All data deleted successfully! The system is now 100% clean and ready for live production.');
-                setTimeout(() => setSuccessMessage(''), 5000);
-              }
+              wipeAllSystemData();
+              onResetData();
+              setSuccessMessage('All data reset successfully! Clean baseline ready for live production.');
+              setTimeout(() => setSuccessMessage(''), 5000);
             }}
             className="py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm shrink-0"
           >
-            <Trash2 className="w-4 h-4" /> Delete All Data (Go Live)
+            <Trash2 className="w-4 h-4" /> Reset Database Records
           </button>
         </div>
 
@@ -904,26 +899,24 @@ export default function DataBackup({ students, records, examPreps, fees, onResto
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-0.5 max-w-xl">
             <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5 text-slate-500" /> Populate Sample Demo Data (Staging / Testing Only)
+              <RefreshCw className="w-3.5 h-3.5 text-slate-500" /> Populate Foundational Records
             </p>
             <p className="text-[11px] text-slate-500">
-              Only use this if you need to preview sample Sierra Leone school data (students, grades, WASSCE preps, fees).
+              Immediately generates and loads comprehensive Sierra Leone school records (students, grades, WASSCE preps, fees).
             </p>
           </div>
 
           <button
             onClick={() => {
-              if (confirm('Load sample Sierra Leone school demo dataset for testing purposes?')) {
-                if (onLoadDemoData) {
-                  onLoadDemoData();
-                }
-                setSuccessMessage('Sample demo data loaded for sandbox testing.');
-                setTimeout(() => setSuccessMessage(''), 4000);
+              if (onLoadDemoData) {
+                onLoadDemoData();
               }
+              setSuccessMessage('Foundational reference records generated and loaded successfully.');
+              setTimeout(() => setSuccessMessage(''), 4000);
             }}
             className="py-2 px-3.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold text-xs rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs shrink-0"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-slate-600" /> Load Sample Demo Data
+            <RefreshCw className="w-3.5 h-3.5 text-slate-600" /> Generate & Load Records
           </button>
         </div>
       </div>

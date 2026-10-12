@@ -12,8 +12,10 @@ export default defineConfig(() => {
       },
     },
     define: {
-      'process.env.FIREBASE_API_KEY': JSON.stringify(process.env.FIREBASE_API_KEY || 'AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
-      'process.env.VITE_FIREBASE_API_KEY': JSON.stringify(process.env.VITE_FIREBASE_API_KEY || 'AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
+      'process.env.FIREBASE_API_KEY': JSON.stringify('AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
+      'process.env.VITE_FIREBASE_API_KEY': JSON.stringify('AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
+      'import.meta.env.VITE_FIREBASE_API_KEY': JSON.stringify('AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
+      'import.meta.env.FIREBASE_API_KEY': JSON.stringify('AIzaSyBPczm2HxZHOXy6x_lbSHT-A4Zcm32lCv0'),
     },
     server: {
       host: '0.0.0.0',

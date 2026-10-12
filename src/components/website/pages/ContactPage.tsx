@@ -46,14 +46,12 @@ export default function ContactPage() {
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
               <MapPin className="w-6 h-6" />
             </div>
-            <h3 className="text-base font-black text-slate-900">Campus Physical Address</h3>
-            <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              <strong>Givers World Mission Diplomats Academy & College</strong><br />
-              Mission Road, Kambia 1, Northern Province,<br />
-              Sierra Leone, West Africa
+            <h3 className="text-base font-black text-slate-900">Compound Physical Address</h3>
+            <p className="text-xs text-slate-700 leading-relaxed font-bold">
+              Givers World Mission Compound Kambia Town Sierra Leone.
             </p>
-            <p className="text-[11px] text-slate-400 font-medium">
-              Landmark: Near Kambia Central Mosque & Court Bary
+            <p className="text-[11px] text-slate-500 font-medium">
+              Landmark: Central Corridor, Kambia Town, Northern Province
             </p>
           </div>
         </ScrollFadeIn>
@@ -64,13 +62,16 @@ export default function ContactPage() {
               <Phone className="w-6 h-6" />
             </div>
             <h3 className="text-base font-black text-slate-900">Phone & SMS Inquiries</h3>
-            <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              <strong>Administrative Desk:</strong> {SCHOOL_INFO.phone}<br />
-              <strong>WhatsApp Enquiries:</strong> +232 76 123 456<br />
-              <strong>Principal's Secretariat:</strong> +232 30 555 123
+            <p className="text-sm font-black font-mono text-slate-900 leading-relaxed">
+              <a href="tel:+23274155000" className="hover:text-blue-600 transition-colors">
+                +232 74155000
+              </a>
+            </p>
+            <p className="text-xs text-slate-600">
+              Direct voice calls & SMS inquiries for Admissions, Bursary, and Principal's Secretariat.
             </p>
             <p className="text-[11px] text-slate-400 font-medium">
-              Direct mobile dispatches on Orange, Africell, and QCell
+              Network coverage: Orange, Africell, and QCell
             </p>
           </div>
         </ScrollFadeIn>

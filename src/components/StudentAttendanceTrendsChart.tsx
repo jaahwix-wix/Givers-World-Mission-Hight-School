@@ -42,14 +42,15 @@ export default function StudentAttendanceTrendsChart({ records, students }: Stud
     let baseRateSum = 0;
     let recordsCount = 0;
     records.forEach(r => {
-      const att = r.terms[3]?.attendance || r.terms[2]?.attendance;
+      const att = r?.terms?.[3]?.attendance || r?.terms?.[2]?.attendance || r?.terms?.[1]?.attendance;
       if (att && att.totalDays > 0) {
         baseRateSum += (att.presentDays / att.totalDays) * 100;
         recordsCount++;
       }
     });
 
-    const averageSchoolBase = recordsCount > 0 ? (baseRateSum / recordsCount) : 94.5;
+    const rawAverage = recordsCount > 0 ? (baseRateSum / recordsCount) : 94.5;
+    const averageSchoolBase = isNaN(rawAverage) ? 94.5 : rawAverage;
 
     // 12 Weeks of Term 3 progression
     const weeklyProgression = [

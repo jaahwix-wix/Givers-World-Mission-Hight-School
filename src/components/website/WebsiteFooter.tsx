@@ -121,12 +121,10 @@ export default function WebsiteFooter({ onNavigate }: WebsiteFooterProps) {
             <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 space-y-1 text-xs">
               <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
                 <MapPin className="w-3.5 h-3.5 shrink-0" />
-                <span>Physical Campus Address</span>
+                <span>Compound Physical Address</span>
               </div>
-              <p className="text-slate-300 font-medium leading-relaxed">
-                Mission Road, Kambia 1,<br />
-                Northern Province, Sierra Leone<br />
-                <span className="text-[11px] text-slate-400">(Adjacent to Court Bary & Central Mosque)</span>
+              <p className="text-slate-300 font-bold leading-relaxed">
+                Givers World Mission Compound Kambia Town Sierra Leone.
               </p>
             </div>
 
@@ -155,19 +153,13 @@ export default function WebsiteFooter({ onNavigate }: WebsiteFooterProps) {
                   <Phone className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="text-[11px] text-slate-400 block font-bold uppercase tracking-wider">
-                      General Administration & Admissions:
+                      Phone & SMS Inquiries:
                     </span>
                     <a 
-                      href="tel:+23276123456" 
+                      href="tel:+23274155000" 
                       className="text-white font-mono font-bold hover:text-emerald-400 transition-colors block text-sm mt-0.5"
                     >
-                      {SCHOOL_INFO.phone}
-                    </a>
-                    <a 
-                      href="tel:+23277987654" 
-                      className="text-slate-300 font-mono text-xs hover:text-emerald-400 transition-colors block mt-0.5"
-                    >
-                      Alt: +232 77 987 654
+                      +232 74155000
                     </a>
                   </div>
                 </div>
@@ -176,15 +168,15 @@ export default function WebsiteFooter({ onNavigate }: WebsiteFooterProps) {
                   <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="text-[11px] text-slate-400 block font-bold uppercase tracking-wider">
-                      WhatsApp Helpdesk:
+                      WhatsApp & SMS:
                     </span>
                     <a 
-                      href="https://wa.me/23276123456" 
+                      href="https://wa.me/23274155000" 
                       target="_blank" 
                       rel="noopener noreferrer" 
                       className="text-emerald-400 font-mono font-bold hover:underline"
                     >
-                      +232 76 123 456
+                      +232 74155000
                     </a>
                   </div>
                 </div>

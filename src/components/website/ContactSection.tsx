@@ -160,11 +160,9 @@ export default function ContactSection() {
               <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
                 <MapPin className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-slate-200">Physical Campus Address</h4>
-                  <p className="text-slate-400 mt-0.5 leading-relaxed">
-                    Mission Road, Kambia 1,<br />
-                    Northern Province, Sierra Leone<br />
-                    (Near Court Bary & Central Mosque)
+                  <h4 className="font-bold text-slate-200">Compound Physical Address</h4>
+                  <p className="text-slate-300 mt-0.5 leading-relaxed font-semibold">
+                    Givers World Mission Compound Kambia Town Sierra Leone.
                   </p>
                 </div>
               </div>
@@ -172,11 +170,11 @@ export default function ContactSection() {
               <div className="flex items-start gap-3 p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80">
                 <Phone className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-slate-200">Phone & WhatsApp Lines</h4>
-                  <p className="text-slate-400 mt-0.5 leading-relaxed font-mono">
-                    Hotline: {SCHOOL_INFO.phone}<br />
-                    Principal Office: +232 30 555 123<br />
-                    Bursary & Accounts: +232 88 444 789
+                  <h4 className="font-bold text-slate-200">Phone & SMS Inquiries</h4>
+                  <p className="text-slate-300 mt-0.5 leading-relaxed font-mono font-bold text-sm">
+                    <a href="tel:+23274155000" className="hover:text-emerald-400 transition-colors">
+                      +232 74155000
+                    </a>
                   </p>
                 </div>
               </div>
