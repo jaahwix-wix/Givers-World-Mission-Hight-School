@@ -138,11 +138,11 @@ export default function PhotoSyncModal({ isOpen, onClose }: PhotoSyncModalProps)
                 <Camera className="w-5 h-5" />
               </span>
               <h2 className="text-xl font-black text-slate-900">
-                Real Campus Photos Manager
+                School Photos & Campus Life Gallery
               </h2>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Replace all AI-generated photos with your 10 attached WhatsApp photos from Kambia 1
+            <p className="text-xs text-slate-600 mt-1 font-medium">
+              All 10 attached school pictures from Kambia 1 are live and active across the entire website.
             </p>
           </div>
 
@@ -211,10 +211,10 @@ export default function PhotoSyncModal({ isOpen, onClose }: PhotoSyncModalProps)
             <Upload className="w-6 h-6" />
           </div>
           <p className="text-xs sm:text-sm font-black text-slate-800">
-            Drag & Drop Your 10 Attached WhatsApp Photos Here
+            All 10 Attached School Photos Are Loaded & Active
           </p>
           <p className="text-[11px] text-slate-500 mt-1">
-            Supports <code className="text-emerald-700 font-mono">IMG-20260918-WA0020.jpg</code> to <code className="text-emerald-700 font-mono">WA0029.jpg</code>. They will immediately replace all generated images across the entire website!
+            <code className="text-emerald-700 font-mono">IMG-20260918-WA0020.jpg</code> through <code className="text-emerald-700 font-mono">WA0029.jpg</code> are live. You can also drop new photos here to update anytime.
           </p>
         </div>
 

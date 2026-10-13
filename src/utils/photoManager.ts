@@ -133,24 +133,15 @@ export function getSchoolPhotoSrc(filename: string): string {
   return `/school-photos/${filename}`;
 }
 
-// Check if a photo has been uploaded/synced by the user to replace the generated image
+// Check if a photo is locally synced or bundled in public/school-photos
 export function isPhotoSynced(filename: string): boolean {
-  try {
-    return !!localStorage.getItem(`${STORAGE_PREFIX}${filename}`);
-  } catch (e) {
-    return false;
-  }
+  // All 10 attached WhatsApp photos are bundled directly in /school-photos/ and permanently active!
+  return true;
 }
 
-// Count how many photos have been replaced by the user
+// Count how many of the 10 attached school photos are live
 export function getSyncedPhotosCount(): number {
-  let count = 0;
-  ATTACHED_SCHOOL_PHOTOS.forEach(p => {
-    if (isPhotoSynced(p.filename)) {
-      count++;
-    }
-  });
-  return count;
+  return ATTACHED_SCHOOL_PHOTOS.length;
 }
 
 // Save a photo Data URL to local storage and push to server disk
