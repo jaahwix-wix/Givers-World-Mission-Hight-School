@@ -1,11 +1,55 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
 import {defineConfig} from 'vite';
+
+function photoUploadPlugin() {
+  return {
+    name: 'photo-upload-middleware',
+    configureServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        if (req.method === 'POST' && req.url === '/api/upload-photo') {
+          let body = '';
+          req.on('data', (chunk: any) => { body += chunk; });
+          req.on('end', () => {
+            try {
+              const { filename, dataUrl } = JSON.parse(body);
+              if (filename && dataUrl) {
+                const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+                const buffer = Buffer.from(base64Data, 'base64');
+                const photosDir = path.resolve(__dirname, 'public/school-photos');
+                if (!fs.existsSync(photosDir)) {
+                  fs.mkdirSync(photosDir, { recursive: true });
+                }
+                fs.writeFileSync(path.resolve(photosDir, filename), buffer);
+
+                if (filename === 'logo.jpg') {
+                  fs.writeFileSync(path.resolve(__dirname, 'public/logo.jpg'), buffer);
+                  fs.writeFileSync(path.resolve(__dirname, 'src/assets/logo.jpg'), buffer);
+                }
+
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, filename }));
+                return;
+              }
+            } catch (err: any) {
+              console.error('Error saving uploaded photo:', err);
+            }
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false }));
+          });
+          return;
+        }
+        next();
+      });
+    }
+  };
+}
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), photoUploadPlugin()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

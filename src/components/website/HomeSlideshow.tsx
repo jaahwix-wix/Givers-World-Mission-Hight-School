@@ -83,6 +83,54 @@ const SLIDES_CONFIG: Slide[] = [
     ctaText: 'Tour Campus Facilities',
     ctaAction: 'facilities',
     stats: { label: 'Division', value: 'College of Theology & Tech' }
+  },
+  {
+    id: 'nursery-grad',
+    filename: 'IMG-20260918-WA0029.jpg',
+    title: 'Early Childhood & Nursery Graduation Class',
+    subtitle: 'Young pupils in immaculate white gowns and caps celebrating early childhood milestones in Kambia 1.',
+    category: 'Nursery Graduation & Foundation',
+    icon: Award,
+    alt: 'Nursery graduates in white academic gowns celebrating in Kambia 1',
+    ctaText: 'Enroll in Nursery & Primary',
+    ctaAction: 'admissions',
+    stats: { label: 'Early Years', value: 'Ages 3 - 6' }
+  },
+  {
+    id: 'chapel-convocation',
+    filename: 'IMG-20260918-WA0025.jpg',
+    title: 'Chapel Convocation & Assembly with Band',
+    subtitle: 'Grand graduation ceremony in the assembly hall with junior & senior graduates alongside the school band drum kit.',
+    category: 'Assembly & Christian Worship',
+    icon: Sparkles,
+    alt: 'Graduates assembled in hall with school drum kit at Givers World Mission Kambia',
+    ctaText: 'View Events Gallery',
+    ctaAction: 'gallery',
+    stats: { label: 'Tradition', value: 'Christian Devotion' }
+  },
+  {
+    id: 'senior-mentor',
+    filename: 'IMG-20260918-WA0023.jpg',
+    title: 'Senior Graduates with Academic Mentor',
+    subtitle: 'Senior graduating class in sky-blue robes and white stoles celebrating alongside their teacher outdoors on campus grounds.',
+    category: 'Senior Graduation & Faculty',
+    icon: GraduationCap,
+    alt: 'Senior graduating scholars in sky blue regalia with mentor on campus grounds',
+    ctaText: 'Meet Our Faculty',
+    ctaAction: 'about',
+    stats: { label: 'Mentorship', value: 'Dedicated Tutors' }
+  },
+  {
+    id: 'faculty-leaders',
+    filename: 'IMG-20260918-WA0026.jpg',
+    title: 'Academic Leaders & Faculty Mentorship',
+    subtitle: 'Secondary school pupils and faculty standing together with academic report folios, upholding high moral discipline.',
+    category: 'Secondary Leadership & Governance',
+    icon: ShieldCheck,
+    alt: 'Secondary students in blazers with faculty leadership in Kambia',
+    ctaText: 'Read Academy Profile',
+    ctaAction: 'about',
+    stats: { label: 'Leadership', value: 'Eagles Squad' }
   }
 ];
 

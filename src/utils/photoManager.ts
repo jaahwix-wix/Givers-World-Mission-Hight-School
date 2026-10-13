@@ -133,7 +133,7 @@ export function getSchoolPhotoSrc(filename: string): string {
   return `/school-photos/${filename}`;
 }
 
-// Check if a photo is locally synced
+// Check if a photo has been uploaded/synced by the user to replace the generated image
 export function isPhotoSynced(filename: string): boolean {
   try {
     return !!localStorage.getItem(`${STORAGE_PREFIX}${filename}`);
@@ -142,7 +142,7 @@ export function isPhotoSynced(filename: string): boolean {
   }
 }
 
-// Count how many of the 10 attached photos are synced
+// Count how many photos have been replaced by the user
 export function getSyncedPhotosCount(): number {
   let count = 0;
   ATTACHED_SCHOOL_PHOTOS.forEach(p => {
@@ -153,11 +153,20 @@ export function getSyncedPhotosCount(): number {
   return count;
 }
 
-// Save a photo Data URL
+// Save a photo Data URL to local storage and push to server disk
 export function saveSchoolPhoto(filename: string, dataUrl: string) {
   try {
     localStorage.setItem(`${STORAGE_PREFIX}${filename}`, dataUrl);
     window.dispatchEvent(new CustomEvent(SYNC_EVENT_NAME, { detail: { filename } }));
+
+    // Persist to backend server so it replaces file on disk
+    fetch('/api/upload-photo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename, dataUrl })
+    }).catch(err => {
+      console.warn('Backend disk photo save non-fatal:', err);
+    });
   } catch (e) {
     console.error('Failed to save photo to localStorage', e);
   }

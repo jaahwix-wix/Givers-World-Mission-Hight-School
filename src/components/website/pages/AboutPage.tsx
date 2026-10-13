@@ -202,6 +202,86 @@ export default function AboutPage({ onNavigate }: AboutPageProps) {
         </div>
       </section>
 
+      {/* Authentic Campus & Student Life Photo Showcase */}
+      <section className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <span className="text-xs font-black text-emerald-700 uppercase tracking-wider">
+              Authentic Campus Life in Kambia 1
+            </span>
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+              Pupils, Scholars & Convocation Gallery
+            </h2>
+            <p className="text-xs text-slate-500">
+              Photographic archives of daily academic life and graduation commencements at G.W.D.A
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('gallery')}
+            className="self-start sm:self-auto px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <span>View All 10 Photos in Gallery</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-xs group">
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <img 
+                src="/school-photos/IMG-20260918-WA0028.jpg" 
+                alt="Junior Secondary Scholars in official blazer uniforms" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3">
+                <span className="text-xs font-black text-white">Secondary Scholars in Blazers</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-xs group">
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <img 
+                src="/school-photos/IMG-20260918-WA0027.jpg" 
+                alt="Primary pupils seated at desks writing exam in classroom" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3">
+                <span className="text-xs font-black text-white">Classroom Exam in Kambia 1</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-xs group">
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <img 
+                src="/school-photos/IMG-20260918-WA0020.jpg" 
+                alt="Commencement ceremony graduation lineup" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3">
+                <span className="text-xs font-black text-white">Commencement Graduation</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-xs group">
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <img 
+                src="/school-photos/IMG-20260918-WA0022.jpg" 
+                alt="College Division female scholars in emerald green academic robes" 
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-3">
+                <span className="text-xs font-black text-white">College Division Diplomats</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Location in Kambia Town & Compound Physical Address */}
       <section className="bg-emerald-50 border border-emerald-200 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="space-y-2">

@@ -571,6 +571,104 @@ export default function PortalLoginPage({
                         )}
                       </div>
 
+                      {/* Pre-Generated Quick Fill System Keys (No Need to Ask) */}
+                      <div className="mt-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1">
+                          <KeyRound className="w-3 h-3 text-emerald-600" />
+                          <span>Pre-Generated System Keys (Click to Auto-Fill):</span>
+                        </span>
+                        
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedPortal === 'teacher' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('TCH-1001')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                TCH-1001 (Mr. Conteh)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('TCH-2002')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                TCH-2002 (Mrs. Bangura)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('TCH-3003')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                TCH-3003 (Mr. Kamara)
+                              </button>
+                            </>
+                          )}
+
+                          {selectedPortal === 'parent' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('PAR-8492')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                PAR-8492 (Kamara Guardian)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('PAR-3195')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                PAR-3195 (Sesay Guardian)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('PAR-5521')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                PAR-5521 (Bangura Guardian)
+                              </button>
+                            </>
+                          )}
+
+                          {selectedPortal === 'student' && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('GWM-2024-001')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                GWM-2024-001 (Mohamed S.)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('GWM-2024-002')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                GWM-2024-002 (Fatmata B.)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCredentialInput('GWM-2024-003')}
+                                className="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs"
+                              >
+                                GWM-2024-003 (Ibrahim S.)
+                              </button>
+                            </>
+                          )}
+
+                          {(selectedPortal === 'admin' || selectedPortal === 'bursar' || selectedPortal === 'transport') && (
+                            <button
+                              type="button"
+                              onClick={() => setCredentialInput('1234')}
+                              className="px-2.5 py-1 rounded-lg bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 text-[11px] font-mono font-bold transition-colors cursor-pointer shadow-2xs flex items-center gap-1"
+                            >
+                              <span>Pre-Set PIN: 1234</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
                       <p className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
                         <span>{currentConfig.helpText}</span>
                       </p>

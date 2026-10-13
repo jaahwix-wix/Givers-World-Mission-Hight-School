@@ -162,10 +162,10 @@ export default function WebsiteNavbar({ currentPage, onNavigate, onEnterMIS, not
             type="button"
             onClick={() => setIsPhotoSyncOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black text-xs transition-colors cursor-pointer border border-emerald-200"
-            title="Manage or Sync Attached Real Photos"
+            title="Replace AI-generated images with your authentic attached school photos"
           >
             <Camera className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Real Photos</span>
+            <span>Replace Generated Photos</span>
           </button>
 
           {onEnterMIS && (

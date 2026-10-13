@@ -39,6 +39,7 @@ export default function PhotoSyncModal({ isOpen, onClose }: PhotoSyncModalProps)
 
   const refreshSyncStatus = () => {
     const map: Record<string, boolean> = {};
+    map['logo.jpg'] = isPhotoSynced('logo.jpg');
     ATTACHED_SCHOOL_PHOTOS.forEach(p => {
       map[p.filename] = isPhotoSynced(p.filename);
     });
@@ -217,10 +218,72 @@ export default function PhotoSyncModal({ isOpen, onClose }: PhotoSyncModalProps)
           </p>
         </div>
 
-        {/* Grid of 10 Attached Photos */}
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-            Attached Photos Roster (10 Photos)
+        {/* Grid of School Crest & 10 Attached Photos */}
+        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+          {/* Official School Crest Slot */}
+          <div className="p-3.5 rounded-2xl border border-indigo-200 bg-indigo-50/40 flex items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3">
+              <div className="w-14 h-14 rounded-xl overflow-hidden bg-white flex-shrink-0 border border-indigo-200 p-1 flex items-center justify-center shadow-xs">
+                <img 
+                  src={getSchoolPhotoSrc('logo.jpg')} 
+                  alt="Official School Crest" 
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/logo.jpg';
+                  }}
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase text-indigo-700 tracking-wider">
+                    School Crest / Official Emblem
+                  </span>
+                  {syncedMap['logo.jpg'] ? (
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-600 text-white flex items-center gap-1">
+                      <CheckCircle2 className="w-2.5 h-2.5" />
+                      Replaced with Attached Crest
+                    </span>
+                  ) : (
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800">
+                      AI-Generated • Ready to Replace
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-black text-slate-900 mt-0.5">
+                  Givers World Mission Crest Logo (Heraldic Emblem)
+                </p>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  logo.jpg • Replaces logo on Navbar, Header, ID Badges & Report Cards
+                </p>
+              </div>
+            </div>
+
+            <label className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs cursor-pointer transition-colors shadow-2xs flex-shrink-0 flex items-center gap-1">
+              <Upload className="w-3.5 h-3.5" />
+              <span>Replace Crest</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    try {
+                      const base64 = await readFileAsDataUrl(file);
+                      saveSchoolPhoto('logo.jpg', base64);
+                      refreshSyncStatus();
+                    } catch (err) {
+                      console.error('Crest upload failed', err);
+                    }
+                  }
+                }}
+              />
+            </label>
+          </div>
+
+          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider pt-2">
+            Campus Life & Events Photo Slots (10 Photos)
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {ATTACHED_SCHOOL_PHOTOS.map((photo, idx) => {
@@ -243,7 +306,6 @@ export default function PhotoSyncModal({ isOpen, onClose }: PhotoSyncModalProps)
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        // Fallback icon if not yet uploaded to public/
                         (e.target as HTMLElement).style.display = 'none';
                       }}
                     />

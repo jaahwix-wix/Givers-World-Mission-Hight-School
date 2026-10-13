@@ -73,6 +73,7 @@ import { AnimatePresence } from 'motion/react';
 
 import schoolLogo from './assets/logo.jpg';
 import { getPendingFeeStudents, PendingFeeStudent } from './utils/feeUtils';
+import { ensureStudentAccessCodes } from './utils/codeGenerator';
 export { getPendingFeeStudents };
 export type { PendingFeeStudent };
 
@@ -161,13 +162,13 @@ export default function App() {
 
   // 1. Real-time Cloud Firestore & LocalStorage Synchronization
   useEffect(() => {
-    // Realtime Sync for Students
+    // Realtime Sync for Students (All keys guaranteed pre-generated)
     const unsubStudents = syncFirestoreCollection<Student>(
-      'students',
-      'sma_students',
-      (items) => setStudents(items),
-      INITIAL_STUDENTS
-    );
+       'students',
+       'sma_students',
+       (items) => setStudents(items.map(ensureStudentAccessCodes)),
+       INITIAL_STUDENTS.map(ensureStudentAccessCodes)
+     );
 
     // Realtime Sync for Academic Records
     const unsubRecords = syncFirestoreCollection<StudentAcademicRecord>(
@@ -221,7 +222,8 @@ export default function App() {
   };
 
   // 2. Student CRUD Triggers & Referential Consistency with Cloud Firestore
-  const handleAddStudent = (newStudent: Student) => {
+  const handleAddStudent = (incomingStudent: Student) => {
+    const newStudent = ensureStudentAccessCodes(incomingStudent);
     const updatedStuds = [newStudent, ...students];
     setStudents(updatedStuds);
     saveStateToStorage('sma_students', updatedStuds);
@@ -263,7 +265,8 @@ export default function App() {
     saveToFirestore('fee_ledgers', newStudent.id, newLedger);
   };
 
-  const handleUpdateStudent = (updatedStudent: Student) => {
+  const handleUpdateStudent = (incomingStudent: Student) => {
+    const updatedStudent = ensureStudentAccessCodes(incomingStudent);
     const updatedStuds = students.map(s => s.id === updatedStudent.id ? updatedStudent : s);
     setStudents(updatedStuds);
     saveStateToStorage('sma_students', updatedStuds);

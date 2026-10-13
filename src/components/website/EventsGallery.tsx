@@ -97,18 +97,15 @@ export default function EventsGallery() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            {/* Sync / Manage Photos Button */}
+            {/* Replace AI Images with Attached Photos Button */}
             <button
               type="button"
               onClick={() => setIsSyncModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-sm transition-all cursor-pointer hover:shadow-md"
-              title="Sync or drop the 10 attached WhatsApp photos"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-sm transition-all cursor-pointer hover:shadow-md"
+              title="Replace AI-generated images with your authentic attached school photos"
             >
               <Upload className="w-3.5 h-3.5 text-emerald-200" />
-              <span>Sync Attached Photos</span>
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-900 text-emerald-100 text-[10px]">
-                {syncedCount}/10
-              </span>
+              <span>Replace Generated Images with My Photos</span>
             </button>
 
             {/* Filter Pills */}
